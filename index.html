@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>AgriScan Zambia · AI Crop Infection</title>
   <meta name="theme-color" content="#1e3c2c">
   <!-- TensorFlow.js + MobileNet -->
@@ -60,8 +60,9 @@
     .upload-zone h3 { font-family: var(--font-display); font-weight: 450; color: var(--primary); }
     .upload-zone p { color: var(--ink-faint); font-size: 14px; }
     .file-input { display: none; }
-    .preview-box { margin-top: 18px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-    .preview-box img { width: 100%; max-height: 300px; object-fit: contain; background: #f0f5eb; display: block; }
+    .preview-box { margin-top: 18px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.04); position: relative; }
+    .preview-box img { width: 100%; max-height: 350px; object-fit: contain; background: #f0f5eb; display: block; }
+    .preview-box .camera-overlay { position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; }
     .result-panel { background: var(--gold-tint); border-radius: 16px; padding: 16px 20px; margin-top: 12px; border-left: 6px solid var(--gold); }
     .result-panel .plant-name { font-size: 20px; font-weight: 700; color: var(--primary); }
     .result-panel .disease-tag { display: inline-block; padding: 4px 16px; border-radius: 40px; font-size: 13px; font-weight: 600; margin-top: 4px; }
@@ -99,6 +100,8 @@
     .btn-success:hover { background: #1f6b3a; }
     .btn-warning { background: #d4a72c; color: #1e2c1e; }
     .btn-warning:hover { background: #b88f20; }
+    .btn-camera { background: linear-gradient(135deg, #2b5a3e, #1e3c2c); color: #fff; border: 2px solid var(--gold); }
+    .btn-camera:hover { background: linear-gradient(135deg, #1e3c2c, #143022); }
     .footer-note { text-align: center; font-size: 12px; color: var(--ink-faint); border-top: 1px solid var(--border); padding-top: 20px; margin-top: 30px; }
     .toast {
       position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -126,7 +129,12 @@
     .lang-btn:hover { background: var(--gold-tint); border-color: var(--gold); }
     .lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     .fallback-badge { background: #f0b34b; color: #1e2c1e; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; margin-left: 6px; }
-    @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .lang-btn { font-size: 10px; padding: 3px 8px; } }
+    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .action-buttons .btn { flex: 1; min-width: 100px; justify-content: center; }
+    #cameraVideo { width: 100%; max-height: 350px; border-radius: 16px; background: #1a1a1a; display: none; }
+    .camera-controls { display: none; gap: 10px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+    .camera-controls .btn { min-width: 120px; justify-content: center; }
+    @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .lang-btn { font-size: 10px; padding: 3px 8px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
 <body>
@@ -158,16 +166,31 @@
     </div>
     <div class="grid-2">
       <div>
+        <!-- Upload Zone -->
         <div class="upload-zone" id="uploadZone">
           <i class="fas fa-cloud-upload-alt"></i>
-          <h3>Upload crop image</h3>
-          <p>Drag & drop or click · JPG, PNG</p>
+          <h3>Upload or take photo</h3>
+          <p>Drag & drop, click to upload, or use camera</p>
           <input type="file" class="file-input" id="fileInput" accept="image/*">
         </div>
+        
+        <!-- Video element for camera -->
+        <video id="cameraVideo" autoplay playsinline></video>
+        
+        <!-- Camera controls -->
+        <div class="camera-controls" id="cameraControls">
+          <button class="btn btn-success" id="captureBtn"><i class="fas fa-camera"></i> Capture</button>
+          <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> Stop Camera</button>
+        </div>
+        
+        <!-- Preview -->
         <div id="previewContainer" class="preview-box" style="display:none;">
           <img id="previewImage" src="#" alt="preview">
         </div>
-        <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+        
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> Camera</button>
           <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Analyze</button>
           <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
           <button class="btn btn-warning" id="retryModelBtn"><i class="fas fa-sync-alt"></i> Reload AI</button>
@@ -191,7 +214,7 @@
             </div>
           </div>
           <div id="resultContent">
-            <p style="color: var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a crop image to start</p>
+            <p style="color: var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload or take a photo to start</p>
           </div>
         </div>
         <div style="margin-top: 12px; background: #eef4ea; border-radius: 40px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -304,7 +327,7 @@
       "Downy mildew": { en: "Downy mildew", bem: "Ishala lya mung'anda", nyanja: "Mabala a mung'anda", tonga: "Mabala a mung'anda", lozi: "Mabala a mung'anda" },
       "rec_healthy": { en: "✅ Crop appears healthy. Continue good agricultural practices.", bem: "✅ Icilimwa cali ubumi. Pitilizani na mibele yabwino ya ulimi.", nyanja: "✅ Mbewu ikuwoneka thanzi. Pitilizani ndi machitidwe abwino a ulimi.", tonga: "✅ Mbewu iilabilila mupilo. Pitilizani ni milimo yabwino ya bulimi.", lozi: "✅ Mbewu iilabilila bupilo. Pitilizani ni milimo yabwino ya bulimi." },
       "rec_general": { en: "🔍 Consult local agricultural extension officer for specific treatment.", bem: "🔍 Afweni nga ulelana na mwina mibele ya ulimi pa citungulushi.", nyanja: "🔍 Funsani akuluakulu a zaulimi kudera lanu.", tonga: "🔍 Imvwa ni mwana wa bulimi wakumusi.", lozi: "🔍 Imvwa ni mwana wa bulimi wakumusi." },
-      "upload_prompt": { en: "Upload a crop image to start", bem: "Toonka ifoto ya cimela mwabwino", nyanja: "Kwezani chithunzi cha mbewu", tonga: "Tweela chifwaniso cha mbewu", lozi: "Tweela chifwaniso cha mbewu" },
+      "upload_prompt": { en: "Upload or take a photo to start", bem: "Toonka ifoto ya cimela mwabwino", nyanja: "Kwezani chithunzi cha mbewu", tonga: "Tweela chifwaniso cha mbewu", lozi: "Tweela chifwaniso cha mbewu" },
       "image_loaded": { en: "Image loaded. Click Analyze", bem: "Ifoto iing'ala. Tooshanya Analyze", nyanja: "Chithunzi chakwezedwa. Dinani Analyze", tonga: "Chifwaniso chakwezwa. Dina Analyze", lozi: "Chifwaniso chakwezwa. Dina Analyze" },
     };
 
@@ -313,9 +336,8 @@
     let modelReady = false;
     let modelLoading = false;
 
-    // ---------- FALLBACK AI (when MobileNet fails) ----------
+    // ---------- FALLBACK AI ----------
     function fallbackAIAnalysis(imageElement) {
-      // Use image data to generate a deterministic but realistic result
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 100;
@@ -323,7 +345,6 @@
       ctx.drawImage(imageElement, 0, 0, 100, 100);
       const imageData = ctx.getImageData(0, 0, 100, 100).data;
       
-      // Generate a hash from the image data
       let hash = 0;
       for (let i = 0; i < Math.min(imageData.length, 1000); i += 10) {
         hash = ((hash << 5) - hash) + imageData[i];
@@ -358,7 +379,6 @@
       statusEl.textContent = '⏳ loading MobileNet...';
       
       try {
-        // Try to load the model with a timeout
         const loadPromise = mobilenet.load({ version: 2, alpha: 1.0 });
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000)
@@ -379,13 +399,11 @@
         analyzeBtn.disabled = false;
         console.error('Model loading error:', err);
         
-        // Switch to fallback mode
         useFallbackAI = true;
         badge.style.display = 'inline-block';
         statusEl.textContent = '⚠️ Fallback mode';
         showToast('⚠️ AI model failed to load. Using fallback mode.', true);
         
-        // Still enable the analyze button for fallback
         const prompt = translateText('upload_prompt');
         resultContent.innerHTML = `
           <div style="text-align:center;padding:10px;">
@@ -399,7 +417,6 @@
     }
 
     async function realAIAnalysis(imageElement) {
-      // If we're in fallback mode, use the fallback AI
       if (useFallbackAI || !mobilenetModel || !modelReady) {
         return fallbackAIAnalysis(imageElement);
       }
@@ -476,6 +493,11 @@
     const analyzeBtn = document.getElementById('analyzeBtn');
     const clearBtn = document.getElementById('clearBtn');
     const retryModelBtn = document.getElementById('retryModelBtn');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const stopCameraBtn = document.getElementById('stopCameraBtn');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraControls = document.getElementById('cameraControls');
     const resultContent = document.getElementById('resultContent');
     const historyList = document.getElementById('historyList');
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -492,6 +514,8 @@
     let currentImageData = null;
     let currentImageElement = null;
     let lastPrediction = null;
+    let cameraStream = null;
+    let isCameraActive = false;
 
     function showToast(msg, isError = false) {
       toastMsg.textContent = msg;
@@ -518,6 +542,97 @@
         showToast(`🌍 Language: ${this.textContent.trim()}`);
       });
     });
+
+    // ---------- CAMERA FUNCTIONS ----------
+    async function startCamera() {
+      try {
+        if (isCameraActive) {
+          showToast('📷 Camera already active');
+          return;
+        }
+        
+        // Check if browser supports getUserMedia
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('❌ Camera not supported on this device', true);
+          return;
+        }
+        
+        // Request camera access
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        
+        cameraVideo.srcObject = cameraStream;
+        cameraVideo.style.display = 'block';
+        cameraControls.style.display = 'flex';
+        uploadZone.style.display = 'none';
+        previewContainer.style.display = 'none';
+        isCameraActive = true;
+        showToast('📷 Camera started. Point at crop and click Capture.');
+        
+      } catch (err) {
+        console.error('Camera error:', err);
+        if (err.name === 'NotAllowedError') {
+          showToast('❌ Camera access denied. Please allow camera permissions.', true);
+        } else if (err.name === 'NotFoundError') {
+          showToast('❌ No camera found on this device.', true);
+        } else {
+          showToast('❌ Camera error: ' + err.message, true);
+        }
+      }
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      cameraVideo.style.display = 'none';
+      cameraControls.style.display = 'none';
+      isCameraActive = false;
+      showToast('📷 Camera stopped');
+    }
+
+    function capturePhoto() {
+      if (!isCameraActive || !cameraStream) {
+        showToast('❌ Camera not active. Start camera first.', true);
+        return;
+      }
+      
+      // Draw video frame to canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraVideo.videoWidth || 1280;
+      canvas.height = cameraVideo.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+      
+      // Convert to data URL
+      currentImageData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      // Display preview
+      previewImage.src = currentImageData;
+      previewContainer.style.display = 'block';
+      
+      // Create image element for AI
+      const img = new Image();
+      img.onload = function() {
+        currentImageElement = img;
+        showToast('✅ Photo captured! Click Analyze to scan.');
+      };
+      img.src = currentImageData;
+      
+      // Hide camera
+      stopCamera();
+      
+      const loadedMsg = translateText('image_loaded');
+      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> ${loadedMsg}</p>`;
+    }
+
+    // ---------- CAMERA EVENT LISTENERS ----------
+    cameraBtn.addEventListener('click', startCamera);
+    captureBtn.addEventListener('click', capturePhoto);
+    stopCameraBtn.addEventListener('click', stopCamera);
 
     // ---------- SUPABASE INIT ----------
     function initSupabase() {
@@ -585,7 +700,7 @@
         const scans = await getAllScans();
         historyList.innerHTML = '';
         if (!scans || scans.length === 0) {
-          historyList.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--ink-faint);"><i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:10px;"></i><p>No scans yet. Upload a crop image to get started.</p></div>`;
+          historyList.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--ink-faint);"><i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:10px;"></i><p>No scans yet. Upload or take a photo to get started.</p></div>`;
         } else {
           scans.forEach(scan => {
             const item = document.createElement('div');
@@ -633,15 +748,26 @@
     }
 
     // ---------- UPLOAD ----------
-    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('click', () => {
+      if (isCameraActive) {
+        stopCamera();
+      }
+      fileInput.click();
+    });
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
     uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
     uploadZone.addEventListener('drop', (e) => {
       e.preventDefault();
       uploadZone.classList.remove('dragover');
+      if (isCameraActive) stopCamera();
       if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); }
     });
-    fileInput.addEventListener('change', function() { if (this.files.length) handleFile(this.files[0]); });
+    fileInput.addEventListener('change', function() { 
+      if (this.files.length) {
+        if (isCameraActive) stopCamera();
+        handleFile(this.files[0]);
+      }
+    });
 
     function handleFile(file) {
       if (!file.type.startsWith('image/')) { showToast('⚠️ Please upload an image', true); return; }
@@ -663,9 +789,12 @@
     }
 
     clearBtn.addEventListener('click', function() {
+      if (isCameraActive) stopCamera();
       currentFile = null; currentImageData = null; currentImageElement = null; lastPrediction = null;
       fileInput.value = ''; previewContainer.style.display = 'none'; previewImage.src = '#';
       uploadZone.style.display = 'block';
+      cameraVideo.style.display = 'none';
+      cameraControls.style.display = 'none';
       const prompt = translateText('upload_prompt');
       resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${prompt}</p>`;
       showToast('Cleared');
@@ -679,7 +808,6 @@
       const recKey = pred.recommendation;
       const recTrans = translateRecommendation(recKey);
       
-      // Show fallback badge if using fallback mode
       if (pred.isFallback || useFallbackAI) {
         badge.style.display = 'inline-block';
       } else {
@@ -728,7 +856,7 @@
     // ---------- ANALYZE ----------
     analyzeBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload an image first', true);
+        showToast('⚠️ Please upload or capture an image first', true);
         return;
       }
       if (!isConnected) {
@@ -769,7 +897,6 @@
       statusEl.textContent = '⏳ retrying...';
       this.disabled = true;
       
-      // Reset model state
       mobilenetModel = null;
       modelReady = false;
       
@@ -803,10 +930,8 @@
     });
 
     // ---------- INIT ----------
-    // Initialize Supabase first
     initSupabase();
     
-    // Load MobileNet model with a delay to let the page render first
     setTimeout(async () => {
       const loaded = await loadMobileNet();
       const prompt = translateText('upload_prompt');
@@ -814,7 +939,6 @@
       if (loaded) {
         resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${prompt}</p>`;
       } else {
-        // Fallback mode is active
         resultContent.innerHTML = `
           <div style="text-align:center;padding:10px;">
             <i class="fas fa-exclamation-triangle" style="color:#f0b34b;font-size:24px;display:block;margin-bottom:8px;"></i>
@@ -826,9 +950,9 @@
       }
     }, 1000);
 
-    console.log('🌱 AgriScan Zambia with multi-language support initialized');
+    console.log('🌱 AgriScan Zambia with Camera Support initialized');
     console.log('🇿🇲 Languages: English, Bemba, Nyanja, Tonga, Lozi');
-    console.log('📊 Fallback mode enabled if AI fails to load');
+    console.log('📸 Camera feature: Click "Camera" to take photos of crops');
   })();
 </script>
 </body>
