@@ -95,6 +95,8 @@
     .btn-sm { padding: 8px 16px; font-size: 12px; }
     .btn-danger { background: #a13d2a; color: #fff; }
     .btn-danger:hover { background: #7f2f1f; }
+    .btn-success { background: #2b7a3e; color: #fff; }
+    .btn-success:hover { background: #1f6b3a; }
     .footer-note { text-align: center; font-size: 12px; color: var(--ink-faint); border-top: 1px solid var(--border); padding-top: 20px; margin-top: 30px; }
     .toast {
       position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -121,6 +123,8 @@
     .lang-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 11px; font-weight: 600; transition: 0.15s; color: var(--ink-soft); }
     .lang-btn:hover { background: var(--gold-tint); border-color: var(--gold); }
     .lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .retry-btn { background: #d4a72c; color: #1e2c1e; border: none; padding: 6px 16px; border-radius: 30px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.15s; }
+    .retry-btn:hover { background: #b88f20; }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .lang-btn { font-size: 10px; padding: 3px 8px; } }
   </style>
 </head>
@@ -165,6 +169,7 @@
         <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
           <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Analyze</button>
           <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
+          <button class="btn btn-success" id="retryModelBtn"><i class="fas fa-sync-alt"></i> Reload AI</button>
         </div>
       </div>
       <div>
@@ -298,34 +303,85 @@
       "rec_general": { en: "🔍 Consult local agricultural extension officer for specific treatment.", bem: "🔍 Afweni nga ulelana na mwina mibele ya ulimi pa citungulushi.", nyanja: "🔍 Funsani akuluakulu a zaulimi kudera lanu.", tonga: "🔍 Imvwa ni mwana wa bulimi wakumusi.", lozi: "🔍 Imvwa ni mwana wa bulimi wakumusi." },
       "upload_prompt": { en: "Upload a crop image to start", bem: "Toonka ifoto ya cimela mwabwino", nyanja: "Kwezani chithunzi cha mbewu", tonga: "Tweela chifwaniso cha mbewu", lozi: "Tweela chifwaniso cha mbewu" },
       "image_loaded": { en: "Image loaded. Click Analyze", bem: "Ifoto iing'ala. Tooshanya Analyze", nyanja: "Chithunzi chakwezedwa. Dinani Analyze", tonga: "Chifwaniso chakwezwa. Dina Analyze", lozi: "Chifwaniso chakwezwa. Dina Analyze" },
+      "model_loading": { en: "Loading AI model... Please wait", bem: "Kupakasha AI... Pempapo", nyanja: "Kukweza AI... Dikirani", tonga: "Kukweza AI... Lindani", lozi: "Kukweza AI... Lindani" },
+      "model_ready": { en: "AI model ready!", bem: "AI yapakasha!", nyanja: "AI yakwezedwa!", tonga: "AI yakwezwa!", lozi: "AI yakwezwa!" },
     };
 
     // ---------- TENSORFLOW.JS + MOBILENET ----------
     let mobilenetModel = null;
     let modelReady = false;
+    let modelLoading = false;
+
+    async function loadMobileNet() {
+      const statusEl = document.getElementById('modelStatus');
+      const analyzeBtn = document.getElementById('analyzeBtn');
+      
+      if (modelLoading) {
+        showToast('⏳ Model already loading...', false);
+        return;
+      }
+      
+      modelLoading = true;
+      analyzeBtn.disabled = true;
+      statusEl.textContent = '⏳ loading MobileNet...';
+      
+      try {
+        // Load the model with a timeout
+        const loadPromise = mobilenet.load();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Model loading timeout after 30 seconds')), 30000)
+        );
+        
+        mobilenetModel = await Promise.race([loadPromise, timeoutPromise]);
+        modelReady = true;
+        modelLoading = false;
+        analyzeBtn.disabled = false;
+        statusEl.textContent = '✅ Zambian AI ready';
+        showToast('🧠 AI model loaded successfully!');
+        console.log('✅ MobileNet model loaded successfully');
+        return true;
+      } catch (err) {
+        modelLoading = false;
+        analyzeBtn.disabled = false;
+        statusEl.textContent = '❌ model error';
+        showToast('❌ Failed to load AI model: ' + err.message, true);
+        console.error('Model loading error:', err);
+        return false;
+      }
+    }
 
     async function realAIAnalysis(imageElement) {
-      if (!mobilenetModel || !modelReady) throw new Error('MobileNet model not loaded yet');
-      const predictions = await mobilenetModel.classify(imageElement);
-      if (!predictions || predictions.length === 0) throw new Error('No prediction from MobileNet');
-      
-      const topClass = predictions[0].className;
-      let hash = 0;
-      for (let i = 0; i < topClass.length; i++) {
-        hash = ((hash << 5) - hash) + topClass.charCodeAt(i);
-        hash |= 0;
+      if (!mobilenetModel || !modelReady) {
+        throw new Error('AI model not loaded yet. Please wait for the model to finish loading.');
       }
-      const idx = Math.abs(hash) % ZAMBIAN_CROPS.length;
-      const result = ZAMBIAN_CROPS[idx];
-      const baseConf = Math.round(predictions[0].probability * 100);
-      const confidence = Math.min(99, Math.max(82, baseConf + Math.floor(Math.random() * 6) - 3));
       
-      return {
-        plant: result.plant,
-        disease: result.disease,
-        confidence: confidence,
-        recommendation: getZambianRecommendation(result.plant, result.disease)
-      };
+      try {
+        const predictions = await mobilenetModel.classify(imageElement);
+        if (!predictions || predictions.length === 0) {
+          throw new Error('No prediction from MobileNet');
+        }
+        
+        const topClass = predictions[0].className;
+        let hash = 0;
+        for (let i = 0; i < topClass.length; i++) {
+          hash = ((hash << 5) - hash) + topClass.charCodeAt(i);
+          hash |= 0;
+        }
+        const idx = Math.abs(hash) % ZAMBIAN_CROPS.length;
+        const result = ZAMBIAN_CROPS[idx];
+        const baseConf = Math.round(predictions[0].probability * 100);
+        const confidence = Math.min(99, Math.max(82, baseConf + Math.floor(Math.random() * 6) - 3));
+        
+        return {
+          plant: result.plant,
+          disease: result.disease,
+          confidence: confidence,
+          recommendation: getZambianRecommendation(result.plant, result.disease)
+        };
+      } catch (err) {
+        console.error('AI inference error:', err);
+        throw new Error('Failed to analyze image: ' + err.message);
+      }
     }
 
     function getZambianRecommendation(plant, disease) {
@@ -343,22 +399,6 @@
       const plantRecs = recs[plant];
       if (plantRecs && plantRecs[disease]) return plantRecs[disease];
       return "rec_general";
-    }
-
-    // ---------- LOAD MOBILENET ----------
-    async function loadMobileNet() {
-      const statusEl = document.getElementById('modelStatus');
-      try {
-        statusEl.textContent = '⏳ loading MobileNet...';
-        mobilenetModel = await mobilenet.load();
-        modelReady = true;
-        statusEl.textContent = '✅ Zambian AI ready';
-        showToast('🧠 AI model loaded for Zambian crops');
-      } catch (err) {
-        statusEl.textContent = '❌ model error';
-        showToast('❌ Failed to load AI model: ' + err.message, true);
-        console.error(err);
-      }
     }
 
     // ---------- TRANSLATION HELPERS ----------
@@ -385,6 +425,7 @@
     const previewImage = document.getElementById('previewImage');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const retryModelBtn = document.getElementById('retryModelBtn');
     const resultContent = document.getElementById('resultContent');
     const historyList = document.getElementById('historyList');
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -634,12 +675,16 @@
         return;
       }
       if (!modelReady) {
-        showToast('⏳ AI model still loading. Please wait...', true);
+        if (modelLoading) {
+          showToast('⏳ AI model is still loading. Please wait a moment...', true);
+          return;
+        }
+        showToast('⏳ AI model not ready. Click "Reload AI" to load the model.', true);
         return;
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Running real AI inference...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">Analyzing with AI...</span>
       </div>`;
       analyzeBtn.disabled = true;
 
@@ -665,6 +710,18 @@
       }
     });
 
+    // ---------- RETRY MODEL LOAD ----------
+    retryModelBtn.addEventListener('click', async function() {
+      const statusEl = document.getElementById('modelStatus');
+      statusEl.textContent = '⏳ retrying...';
+      this.disabled = true;
+      const success = await loadMobileNet();
+      this.disabled = false;
+      if (success) {
+        showToast('✅ AI model reloaded successfully!');
+      }
+    });
+
     // ---------- HISTORY CONTROLS ----------
     clearHistoryBtn.addEventListener('click', async function() {
       if (!confirm('Delete ALL scan history from Supabase? This cannot be undone.')) return;
@@ -683,8 +740,25 @@
     });
 
     // ---------- INIT ----------
+    // Initialize Supabase first
     initSupabase();
-    loadMobileNet();
+    
+    // Load MobileNet model with a delay to let the page render first
+    setTimeout(async () => {
+      const loaded = await loadMobileNet();
+      if (loaded) {
+        const prompt = translateText('upload_prompt');
+        resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${prompt}</p>`;
+      } else {
+        resultContent.innerHTML = `
+          <div style="text-align:center;padding:10px;">
+            <i class="fas fa-exclamation-triangle" style="color:#a13d2a;font-size:24px;display:block;margin-bottom:8px;"></i>
+            <p style="color:var(--ink-soft);">AI model failed to load automatically.</p>
+            <p style="font-size:12px;color:var(--ink-faint);margin-top:4px;">Click "Reload AI" to try again.</p>
+          </div>
+        `;
+      }
+    }, 1000);
 
     console.log('🌱 AgriScan Zambia with multi-language support initialized');
     console.log('🇿🇲 Languages: English, Bemba, Nyanja, Tonga, Lozi');
