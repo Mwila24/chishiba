@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>AgriScan Zambia · Crop Leaf Database</title>
   <meta name="theme-color" content="#1e3c2c">
-  <!-- TensorFlow.js + MobileNet -->
+  <!-- TensorFlow.js + MobileNet (fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <!-- Supabase -->
@@ -36,7 +36,7 @@
     .topbar .brand .icon-leaf { font-size: 32px; color: var(--gold); background: rgba(255,255,255,0.08); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); }
     .topbar .brand h1 { font-family: var(--font-display); font-weight: 600; font-size: 22px; color: #fff; letter-spacing: -0.3px; }
     .topbar .brand .tagline { font-size: 11px; color: var(--gold); letter-spacing: 0.8px; text-transform: uppercase; font-weight: 500; }
-    .topbar .status-badge { background: rgba(255,255,255,0.08); padding: 6px 16px; border-radius: 60px; color: #d4e8d0; font-size: 12px; font-weight: 500; border: 1px solid rgba(212,167,44,0.3); display: flex; align-items: center; gap: 6px; }
+    .topbar .status-badge { background: rgba(255,255,255,0.08); padding: 6px 16px; border-radius: 60px; color: #d4e8d0; font-size: 12px; font-weight: 500; border: 1px solid rgba(212,167,44,0.3); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
     .card {
       background: rgba(255,255,255,0.92); backdrop-filter: blur(4px); border: 1px solid var(--border);
@@ -87,6 +87,8 @@
     .btn-warning:hover { background: #b88f20; }
     .btn-camera { background: linear-gradient(135deg, #2b5a3e, #1e3c2c); color: #fff; border: 2px solid var(--gold); }
     .btn-camera:hover { background: linear-gradient(135deg, #1e3c2c, #143022); }
+    .btn-gemini { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
+    .btn-gemini:hover { background: linear-gradient(135deg, #1557b0, #1a73e8); }
     .toast {
       position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
       background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 60px; font-weight: 500;
@@ -118,6 +120,14 @@
     .reference-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
     .reference-item .name { font-size: 11px; font-weight: 600; color: var(--primary); margin-top: 4px; }
     .reference-item .count { font-size: 10px; color: var(--ink-faint); }
+    .history-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .history-item .h-plant { font-weight: 600; color: var(--primary); min-width: 100px; }
+    .history-item .h-disease { padding: 2px 12px; border-radius: 20px; font-size: 12px; background: #e0f0e0; color: #1f6b3a; }
+    .history-item .h-date { font-size: 12px; color: var(--ink-faint); margin-left: auto; }
+    .gemini-badge { background: linear-gradient(135deg, #4285f4, #34a853); color: white; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; margin-left: 6px; }
+    .api-key-input { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+    .api-key-input input { flex: 1; min-width: 200px; padding: 8px 14px; border: 2px solid var(--border); border-radius: 40px; font-size: 13px; font-family: var(--font-body); outline: none; }
+    .api-key-input input:focus { border-color: var(--gold); }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
@@ -146,7 +156,7 @@
   <div class="card">
     <div class="card-header">
       <h2><i class="fas fa-seedling"></i> Identify & Detect <span class="zambia-flag">🇿🇲</span></h2>
-      <span class="badge-ai"><i class="fas fa-brain"></i> Leaf Database + AI</span>
+      <span class="badge-ai"><i class="fas fa-brain"></i> Gemini AI</span>
     </div>
     <div class="grid-2">
       <div>
@@ -166,10 +176,17 @@
         </div>
         <div class="action-buttons">
           <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> Camera</button>
-          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Analyze</button>
+          <button class="btn btn-gemini" id="analyzeGeminiBtn"><i class="fab fa-google"></i> Analyze with Gemini</button>
+          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Local AI</button>
           <button class="btn btn-success" id="saveRefBtn"><i class="fas fa-save"></i> Add to DB</button>
           <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
         </div>
+        <div class="api-key-input">
+          <i class="fas fa-key" style="color:var(--gold);"></i>
+          <input type="password" id="geminiApiKey" placeholder="Enter Gemini API Key (optional, for better results)" style="flex:1;min-width:200px;">
+          <button class="btn btn-sm btn-gemini" id="saveApiKeyBtn"><i class="fas fa-save"></i> Save</button>
+        </div>
+        <p style="font-size:11px;color:var(--ink-faint);margin-top:4px;"><i class="fas fa-info-circle"></i> Get your free API key at <a href="https://ai.google.dev/gemini-api" target="_blank" style="color:var(--gold);">ai.google.dev/gemini-api</a></p>
       </div>
       <div>
         <div class="result-panel" id="resultPanel">
@@ -177,6 +194,7 @@
             <div style="display:flex;align-items:center;gap:10px;">
               <i class="fas fa-robot" style="color:var(--gold);font-size:20px;"></i>
               <span style="font-weight:600;color:var(--primary);">Diagnosis</span>
+              <span id="analysisMethod" style="font-size:11px;color:var(--ink-faint);"></span>
             </div>
             <div>
               <button class="btn btn-sm btn-warning" id="retryModelBtn"><i class="fas fa-sync-alt"></i> Reload AI</button>
@@ -238,29 +256,27 @@
     let supabase = null;
     let isConnected = false;
 
+    // ---------- GEMINI API ----------
+    let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+    const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent';
+
     // ---------- CROP LEAF DATABASE ----------
-    // Known Zambian crops with their characteristics
     const CROP_DATABASE = [
-      { name: "Maize", aliases: ["corn", "mealie"], leaf_type: "long, broad, parallel veins" },
-      { name: "Cassava", aliases: ["manioc", "yuca"], leaf_type: "palmate, finger-like lobes" },
-      { name: "Groundnuts", aliases: ["peanuts", "goobers"], leaf_type: "small, oval, paired leaflets" },
-      { name: "Soybeans", aliases: ["soya"], leaf_type: "trifoliate, oval leaflets" },
-      { name: "Cotton", aliases: ["lint"], leaf_type: "palmate, 3-5 lobes" },
-      { name: "Sorghum", aliases: ["milo", "durra"], leaf_type: "long, narrow, pointed" },
-      { name: "Sweet Potato", aliases: ["yam"], leaf_type: "heart-shaped or lobed" },
-      { name: "Pumpkin", aliases: ["squash", "calabash"], leaf_type: "large, round, lobed" },
-      { name: "Sunflower", aliases: ["helianthus"], leaf_type: "broad, heart-shaped, rough" },
-      { name: "Cowpea", aliases: ["black-eyed pea"], leaf_type: "trifoliate, oval leaflets" },
-      { name: "Millet", aliases: ["finger millet", "rapoko"], leaf_type: "long, narrow, pointed" },
-      { name: "Rice", aliases: ["paddy"], leaf_type: "long, narrow, pointed" },
-      { name: "Wheat", aliases: ["bread wheat"], leaf_type: "long, narrow, pointed" },
-      { name: "Barley", aliases: ["hordeum"], leaf_type: "long, narrow, pointed" },
-      { name: "Oats", aliases: ["avena"], leaf_type: "long, narrow, pointed" },
-      { name: "Rye", aliases: ["secale"], leaf_type: "long, narrow, pointed" },
+      { name: "Maize", aliases: ["corn", "mealie"], leaf_type: "long, broad, parallel veins", diseases: ["Gray Leaf Spot", "Northern Leaf Blight", "Maize Lethal Necrosis"] },
+      { name: "Cassava", aliases: ["manioc", "yuca"], leaf_type: "palmate, finger-like lobes", diseases: ["Cassava Mosaic Disease", "Brown Streak", "Cassava Bacterial Blight"] },
+      { name: "Groundnuts", aliases: ["peanuts", "goobers"], leaf_type: "small, oval, paired leaflets", diseases: ["Early Leaf Spot", "Late Leaf Spot", "Groundnut Rosette"] },
+      { name: "Soybeans", aliases: ["soya"], leaf_type: "trifoliate, oval leaflets", diseases: ["Soybean Rust", "Asian Soybean Rust"] },
+      { name: "Cotton", aliases: ["lint"], leaf_type: "palmate, 3-5 lobes", diseases: ["Cotton Leaf Curl", "Bacterial Blight"] },
+      { name: "Sorghum", aliases: ["milo", "durra"], leaf_type: "long, narrow, pointed", diseases: ["Sorghum Anthracnose", "Downy Mildew"] },
+      { name: "Sweet Potato", aliases: ["yam"], leaf_type: "heart-shaped or lobed", diseases: ["Sweet Potato Virus", "Fusarium Wilt"] },
+      { name: "Pumpkin", aliases: ["squash", "calabash"], leaf_type: "large, round, lobed", diseases: ["Powdery Mildew", "Downy Mildew"] },
+      { name: "Sunflower", aliases: ["helianthus"], leaf_type: "broad, heart-shaped, rough", diseases: ["Sunflower Rust", "Downy Mildew"] },
+      { name: "Cowpea", aliases: ["black-eyed pea"], leaf_type: "trifoliate, oval leaflets", diseases: ["Cowpea Mosaic Virus", "Cercospora Leaf Spot"] },
+      { name: "Millet", aliases: ["finger millet", "rapoko"], leaf_type: "long, narrow, pointed", diseases: ["Blast", "Downy Mildew"] },
     ];
 
     // ---------- LEAF REFERENCE STORAGE ----------
-    let leafReferences = []; // Array of {id, name, imageData, timestamp}
+    let leafReferences = [];
     let currentImageData = null;
     let currentImageElement = null;
     let lastResult = null;
@@ -270,7 +286,7 @@
     let modelReady = false;
     let modelLoading = false;
 
-    // ---------- IMAGE SIMILARITY (Perceptual Hash) ----------
+    // ---------- IMAGE SIMILARITY ----------
     function getImageHash(imageElement, size = 32) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -279,17 +295,11 @@
       ctx.drawImage(imageElement, 0, 0, size, size);
       const imageData = ctx.getImageData(0, 0, size, size);
       const data = imageData.data;
-      
-      // Convert to grayscale
       const gray = [];
       for (let i = 0; i < data.length; i += 4) {
         gray.push((data[i] + data[i+1] + data[i+2]) / 3);
       }
-      
-      // Calculate average
       const avg = gray.reduce((a, b) => a + b, 0) / gray.length;
-      
-      // Create hash (1 if pixel > average)
       let hash = '';
       for (let i = 0; i < gray.length; i++) {
         hash += gray[i] > avg ? '1' : '0';
@@ -307,7 +317,6 @@
     }
 
     function getImageFeatures(imageElement) {
-      // Extract color histogram features
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 100;
@@ -315,8 +324,6 @@
       ctx.drawImage(imageElement, 0, 0, 100, 100);
       const imageData = ctx.getImageData(0, 0, 100, 100);
       const data = imageData.data;
-      
-      // Color histogram (simplified)
       const hist = { r: 0, g: 0, b: 0, brightness: 0 };
       let count = 0;
       for (let i = 0; i < data.length; i += 4) {
@@ -330,34 +337,21 @@
       hist.g /= count;
       hist.b /= count;
       hist.brightness /= count;
-      
-      // Get hash
       const hash = getImageHash(imageElement);
-      
       return { hist, hash };
     }
 
     function compareImages(img1, img2) {
       const f1 = getImageFeatures(img1);
       const f2 = getImageFeatures(img2);
-      
-      // Compare color histograms
       const colorDiff = Math.abs(f1.hist.r - f2.hist.r) + Math.abs(f1.hist.g - f2.hist.g) + Math.abs(f1.hist.b - f2.hist.b);
       const brightnessDiff = Math.abs(f1.hist.brightness - f2.hist.brightness);
-      
-      // Compare perceptual hash
       const hashDiff = hashDistance(f1.hash, f2.hash);
-      
-      // Normalize scores (0 = identical, higher = more different)
-      const colorScore = colorDiff / 765; // 0-1
-      const brightnessScore = brightnessDiff / 255; // 0-1
-      const hashScore = hashDiff / f1.hash.length; // 0-1
-      
-      // Weighted combined score
+      const colorScore = colorDiff / 765;
+      const brightnessScore = brightnessDiff / 255;
+      const hashScore = hashDiff / f1.hash.length;
       const totalScore = (colorScore * 0.3) + (brightnessScore * 0.2) + (hashScore * 0.5);
-      const similarity = Math.max(0, 1 - totalScore);
-      
-      return similarity;
+      return Math.max(0, 1 - totalScore);
     }
 
     // ---------- LOAD MOBILENET ----------
@@ -386,15 +380,97 @@
       }
     }
 
-    // ---------- IDENTIFY LEAF ----------
-    async function identifyLeaf(imageElement) {
+    // ---------- GEMINI API ANALYSIS ----------
+    async function analyzeWithGemini(imageData) {
+      if (!geminiApiKey) {
+        showToast('⚠️ Please enter your Gemini API key first', true);
+        return null;
+      }
+
+      try {
+        // Convert base64 to proper format
+        const base64Data = imageData.split(',')[1] || imageData;
+        
+        const requestBody = {
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are an agricultural expert. Analyze this leaf image and provide a JSON response with the following fields:
+                  1. plant: The name of the plant (e.g., "Maize", "Cassava", "Groundnuts")
+                  2. disease: The disease name if detected, or "Healthy" if no disease
+                  3. confidence: Percentage confidence (0-100) in your identification
+                  4. recommendation: Brief treatment/prevention recommendation
+                  5. symptoms: Brief description of visible symptoms
+                  
+                  Respond ONLY with valid JSON.`
+                },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 32,
+            topP: 0.95,
+            maxOutputTokens: 1024
+          }
+        };
+
+        const response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        // Extract JSON from response
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No valid JSON found in response');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Map response to our format
+        return {
+          name: parsed.plant || 'Unknown',
+          disease: parsed.disease || 'Pending',
+          confidence: Math.min(100, Math.max(0, parseInt(parsed.confidence) || 70)),
+          recommendation: parsed.recommendation || 'No recommendation available',
+          symptoms: parsed.symptoms || 'No symptoms described',
+          method: 'Gemini AI',
+          leaf_type: 'Analyzed by Gemini'
+        };
+      } catch (err) {
+        console.error('Gemini API Error:', err);
+        showToast('❌ Gemini error: ' + err.message, true);
+        return null;
+      }
+    }
+
+    // ---------- IDENTIFY LEAF (Local AI + Database) ----------
+    async function identifyLeafLocal(imageElement) {
       // Step 1: Try AI classification if available
       if (modelReady && mobilenetModel) {
         try {
           const predictions = await mobilenetModel.classify(imageElement);
           if (predictions && predictions.length > 0) {
             const topClass = predictions[0].className.toLowerCase();
-            // Try to match MobileNet class to our crops
             for (const crop of CROP_DATABASE) {
               if (topClass.includes(crop.name.toLowerCase()) || 
                   crop.aliases.some(a => topClass.includes(a))) {
@@ -402,7 +478,9 @@
                   name: crop.name,
                   confidence: Math.round(predictions[0].probability * 100),
                   method: 'AI Classification',
-                  leaf_type: crop.leaf_type
+                  leaf_type: crop.leaf_type,
+                  disease: crop.diseases?.[0] || 'Pending',
+                  recommendation: `Monitor for ${crop.diseases?.[0] || 'common pests'}`
                 };
               }
             }
@@ -441,12 +519,14 @@
             confidence: Math.round(bestSimilarity * 100),
             method: 'Database Match',
             leaf_type: 'Matched from database',
-            matchCount: bestMatch.count || 1
+            matchCount: bestMatch.count || 1,
+            disease: 'Pending',
+            recommendation: 'Add disease info manually'
           };
         }
       }
 
-      // Step 3: Fallback - use leaf shape analysis (simplified)
+      // Step 3: Fallback - use leaf shape analysis
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 100;
@@ -455,7 +535,6 @@
       const imageData = ctx.getImageData(0, 0, 100, 100);
       const data = imageData.data;
       
-      // Calculate aspect ratio and leaf characteristics
       let minX = 100, maxX = 0, minY = 100, maxY = 0;
       let pixelCount = 0;
       for (let y = 0; y < 100; y++) {
@@ -476,7 +555,6 @@
       const aspectRatio = width / height;
       const density = pixelCount / (width * height);
       
-      // Match based on leaf characteristics
       let bestCrop = CROP_DATABASE[0];
       let bestScore = 0;
       
@@ -501,7 +579,9 @@
         confidence: Math.round(Math.min(95, 60 + bestScore * 40)),
         method: 'Leaf Analysis',
         leaf_type: bestCrop.leaf_type,
-        matchCount: 0
+        matchCount: 0,
+        disease: 'Pending',
+        recommendation: 'Please consult a local agricultural expert'
       };
     }
 
@@ -513,6 +593,7 @@
     const previewContainer = document.getElementById('previewContainer');
     const previewImage = document.getElementById('previewImage');
     const analyzeBtn = document.getElementById('analyzeBtn');
+    const analyzeGeminiBtn = document.getElementById('analyzeGeminiBtn');
     const clearBtn = document.getElementById('clearBtn');
     const cameraBtn = document.getElementById('cameraBtn');
     const captureBtn = document.getElementById('captureBtn');
@@ -530,9 +611,36 @@
     const toastMsg = document.getElementById('toastMsg');
     const historyCountEl = document.getElementById('historyCount');
     const refCountEl = document.getElementById('refCount');
+    const geminiApiKeyInput = document.getElementById('geminiApiKey');
+    const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+    const analysisMethod = document.getElementById('analysisMethod');
 
     let cameraStream = null;
     let isCameraActive = false;
+
+    // Load saved API key
+    if (geminiApiKey) {
+      geminiApiKeyInput.value = geminiApiKey;
+    }
+
+    // Save API key
+    saveApiKeyBtn.addEventListener('click', function() {
+      const key = geminiApiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem('gemini_api_key', key);
+        geminiApiKey = key;
+        showToast('✅ Gemini API key saved');
+      } else {
+        showToast('⚠️ Please enter a valid API key', true);
+      }
+    });
+
+    // Also save on Enter key
+    geminiApiKeyInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        saveApiKeyBtn.click();
+      }
+    });
 
     function showToast(msg, isError = false) {
       toastMsg.textContent = msg;
@@ -598,7 +706,7 @@
       img.onload = function() { currentImageElement = img; };
       img.src = currentImageData;
       stopCamera();
-      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Photo captured. Click Analyze.</p>`;
+      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Photo captured. Click Analyze with Gemini or Local AI.</p>`;
       showToast('📸 Photo captured');
     }
 
@@ -637,7 +745,7 @@
         const img = new Image();
         img.onload = function() { currentImageElement = img; };
         img.src = currentImageData;
-        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Image loaded. Click Analyze.</p>`;
+        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Image loaded. Click Analyze with Gemini or Local AI.</p>`;
         showToast('📸 Image loaded');
       };
       reader.readAsDataURL(file);
@@ -655,10 +763,80 @@
       cameraVideo.style.display = 'none';
       cameraControls.style.display = 'none';
       resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>`;
+      analysisMethod.textContent = '';
       showToast('Cleared');
     });
 
-    // ---------- ANALYZE ----------
+    // ---------- ANALYZE WITH GEMINI ----------
+    analyzeGeminiBtn.addEventListener('click', async function() {
+      if (!currentImageData || !currentImageElement) {
+        showToast('⚠️ Please upload or capture an image first', true);
+        return;
+      }
+
+      if (!geminiApiKey) {
+        showToast('⚠️ Please enter your Gemini API key first', true);
+        geminiApiKeyInput.focus();
+        return;
+      }
+
+      resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
+        <span class="spinner"></span> <span style="font-weight:500;">🧠 Analyzing with Gemini AI...</span>
+      </div>`;
+      analyzeGeminiBtn.disabled = true;
+
+      try {
+        const result = await analyzeWithGemini(currentImageData);
+        if (!result) {
+          resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> Gemini analysis failed. Try the Local AI button.</p>`;
+          return;
+        }
+
+        lastResult = result;
+        analysisMethod.textContent = '🔬 Gemini AI';
+
+        // Save to Supabase
+        if (supabase && isConnected) {
+          try {
+            await supabase.from('scans').insert([{
+              plant: result.name,
+              disease: result.disease || 'Healthy',
+              confidence: result.confidence,
+              recommendation: result.recommendation || '',
+              timestamp: Date.now(),
+              image_data: currentImageData,
+              method: 'Gemini AI'
+            }]);
+            loadHistory();
+          } catch (e) {}
+        }
+
+        // Display result
+        const diseaseColor = result.disease && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
+        resultContent.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
+              <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
+              <span style="font-size:11px;color:var(--ink-faint);"><i class="fab fa-google"></i> Gemini AI</span>
+            </div>
+            <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
+            ${result.symptoms ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-stethoscope"></i> Symptoms: ${result.symptoms}</div>` : ''}
+            ${result.recommendation ? `<div style="font-size:13px;color:var(--ink-soft);background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);margin-top:6px;">
+              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> Recommendation: ${result.recommendation}
+            </div>` : ''}
+          </div>
+        `;
+        showToast(`✅ Gemini identified: ${result.name}${result.disease && result.disease.toLowerCase() !== 'healthy' ? ` - ${result.disease}` : ''}`);
+      } catch (err) {
+        showToast('❌ Error: ' + err.message, true);
+        resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> Error: ${err.message}</p>`;
+      } finally {
+        analyzeGeminiBtn.disabled = false;
+      }
+    });
+
+    // ---------- ANALYZE LOCAL ----------
     analyzeBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
         showToast('⚠️ Please upload or capture an image first', true);
@@ -666,44 +844,45 @@
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf locally...</span>
       </div>`;
       analyzeBtn.disabled = true;
 
       try {
-        const result = await identifyLeaf(currentImageElement);
+        const result = await identifyLeafLocal(currentImageElement);
         lastResult = result;
-        
-        // Save scan to database
+        analysisMethod.textContent = '🔬 Local AI';
+
+        // Save to Supabase
         if (supabase && isConnected) {
           try {
             await supabase.from('scans').insert([{
               plant: result.name,
-              disease: "Pending", // User can update later
+              disease: result.disease || 'Pending',
               confidence: result.confidence,
-              recommendation: `Leaf identified as ${result.name} (${result.method})`,
+              recommendation: result.recommendation || '',
               timestamp: Date.now(),
-              image_data: currentImageData
+              image_data: currentImageData,
+              method: result.method
             }]);
             loadHistory();
           } catch (e) {}
         }
 
-        // Display result
-        const color = '#2b7a3e';
+        const diseaseColor = result.disease && result.disease.toLowerCase() !== 'pending' && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
-              <span class="disease-tag" style="background:${color};color:white;">${result.method}</span>
+              <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
+              <span style="font-size:11px;color:var(--ink-faint);">${result.method}</span>
             </div>
             <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
             ${result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leaf_type}</div>` : ''}
             ${result.matchCount ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-database"></i> Based on ${result.matchCount} reference images</div>` : ''}
-            <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);">
-              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> 
-              ${result.name} leaf identified. Click "Add to DB" to save as reference.
-            </div>
+            ${result.recommendation ? `<div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);">
+              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> ${result.recommendation}
+            </div>` : ''}
           </div>
         `;
         showToast(`✅ Identified: ${result.name}`);
@@ -725,16 +904,13 @@
         return;
       }
 
-      // Check if this leaf already exists in references
       const existing = leafReferences.find(r => r.name === lastResult.name);
       if (existing) {
-        // Update existing reference
         existing.imageData = currentImageData;
         existing.timestamp = Date.now();
         existing.count = (existing.count || 1) + 1;
         showToast(`✅ Updated ${lastResult.name} reference (${existing.count} images)`);
       } else {
-        // Add new reference
         leafReferences.push({
           id: Date.now(),
           name: lastResult.name,
@@ -745,7 +921,6 @@
         showToast(`✅ Added ${lastResult.name} to database`);
       }
 
-      // Save to Supabase
       if (supabase && isConnected) {
         try {
           await supabase.from('leaf_references').upsert([{
@@ -816,9 +991,11 @@
             item.className = 'history-item';
             const date = new Date(scan.timestamp);
             const timeStr = date.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+            const method = scan.method || 'Unknown';
             item.innerHTML = `
               <span class="h-plant"><i class="fas fa-seedling"></i> ${scan.plant || 'Unknown'}</span>
-              <span class="h-disease" style="background:#e0f0e0;color:#1f6b3a;">${scan.disease || 'Pending'}</span>
+              <span class="h-disease" style="background:${scan.disease && scan.disease.toLowerCase() === 'healthy' ? '#d4edda' : '#f8d7da'};color:${scan.disease && scan.disease.toLowerCase() === 'healthy' ? '#155724' : '#721c24'};">${scan.disease || 'Pending'}</span>
+              <span style="font-size:11px;color:var(--ink-faint);">${method}</span>
               <span class="h-date"><i class="far fa-clock"></i> ${timeStr}</span>
             `;
             historyList.appendChild(item);
@@ -887,9 +1064,11 @@
     initSupabase();
     setTimeout(loadMobileNet, 1000);
 
-    console.log('🌱 AgriScan Zambia with Crop Leaf Database');
+    console.log('🌱 AgriScan Zambia with Crop Leaf Database & Gemini AI');
     console.log('📸 Upload a leaf image to identify the crop');
+    console.log('🤖 Use "Analyze with Gemini" for AI-powered disease detection');
     console.log('💾 Click "Add to DB" to save as reference');
+    console.log('🔑 Get your Gemini API key at: https://ai.google.dev/gemini-api');
   })();
 </script>
 </body>
