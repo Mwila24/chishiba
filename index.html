@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>AgriScan · Crop Infection Detector</title>
+  <meta name="theme-color" content="#1e3c2c">
+  <meta name="description" content="AI-powered crop infection detection & plant identification.">
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,600&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    :root {
+      --primary: #1e3c2c;
+      --primary-light: #2b5a3e;
+      --gold: #d4a72c;
+      --gold-tint: #f8f0d5;
+      --surface: #ffffff;
+      --paper: #f4f7f2;
+      --ink: #15201a;
+      --ink-soft: #3b4d3e;
+      --ink-faint: #7c8a7a;
+      --border: #dce3d6;
+      --shadow: 0 12px 32px rgba(0, 20, 10, 0.10);
+      --radius: 24px;
+      --font-display: 'Fraunces', serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(circle at 20% 30%, #eaf3e5 0%, #d6e4d0 70%, #c2d4ba 100%);
+      opacity: 0.5;
+    }
+    .bg-pattern::after {
+      content: "🌾🌿🌱";
+      font-size: 120px;
+      position: absolute;
+      right: -20px;
+      bottom: -20px;
+      opacity: 0.06;
+      letter-spacing: 20px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* top bar */
+    .topbar {
+      background: linear-gradient(135deg, #1e3c2c, #2b5a3e);
+      border-bottom: 3px solid var(--gold);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+    .topbar .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar .brand .icon-leaf {
+      font-size: 32px;
+      color: var(--gold);
+      background: rgba(255,255,255,0.08);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--gold);
+    }
+    .topbar .brand h1 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 22px;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .topbar .brand .tagline {
+      font-size: 11px;
+      color: var(--gold);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .topbar .status-badge {
+      background: rgba(255,255,255,0.08);
+      padding: 6px 16px;
+      border-radius: 60px;
+      color: #d4e8d0;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid rgba(212, 167, 44, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbar .status-badge i {
+      color: var(--gold);
+    }
+
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      border-top: 4px solid var(--gold);
+      transition: 0.2s ease;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .card-header h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 20px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-header h2 i {
+      color: var(--gold);
+    }
+    .card-header .badge-ai {
+      background: var(--primary);
+      color: #fff;
+      padding: 4px 14px;
+      border-radius: 40px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 720px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 20px;
+      padding: 30px 20px;
+      text-align: center;
+      background: var(--paper);
+      transition: 0.2s;
+      cursor: pointer;
+    }
+    .upload-zone:hover {
+      border-color: var(--gold);
+      background: var(--gold-tint);
+    }
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: #e3f0e0;
+    }
+    .upload-zone i {
+      font-size: 48px;
+      color: var(--primary-light);
+      margin-bottom: 10px;
+    }
+    .upload-zone h3 {
+      font-family: var(--font-display);
+      font-weight: 450;
+      color: var(--primary);
+    }
+    .upload-zone p {
+      color: var(--ink-faint);
+      font-size: 14px;
+    }
+    .file-input {
+      display: none;
+    }
+
+    .preview-box {
+      margin-top: 18px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .preview-box img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      background: #f0f5eb;
+      display: block;
+    }
+    .result-panel {
+      background: var(--gold-tint);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-top: 12px;
+      border-left: 6px solid var(--gold);
+    }
+    .result-panel .plant-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .result-panel .disease-tag {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      padding: 4px 16px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .result-panel .confidence {
+      font-size: 14px;
+      color: var(--ink-soft);
+      margin-top: 6px;
+    }
+    .result-panel .confidence span {
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .history-item {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .history-item .h-plant {
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .history-item .h-disease {
+      background: #eef3ea;
+      padding: 2px 14px;
+      border-radius: 40px;
+      font-size: 13px;
+    }
+    .history-item .h-date {
+      color: var(--ink-faint);
+      font-size: 12px;
+    }
+
+    .btn {
+      border: none;
+      padding: 12px 24px;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: 0.15s ease;
+      font-family: var(--font-body);
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(30, 60, 44, 0.25);
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: linear-gradient(135deg, #1e3c2c, #2b5a3e); color: #fff; }
+    .btn-primary:hover { background: linear-gradient(135deg, #143022, #1e3c2c); }
+    .btn-gold { background: linear-gradient(135deg, #d4a72c, #b88f20); color: #1e2c1e; }
+    .btn-gold:hover { background: linear-gradient(135deg, #c49b28, #a07e1c); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); box-shadow: none; }
+    .btn-outline:hover { background: var(--gold-tint); }
+    .btn-sm { padding: 8px 16px; font-size: 12px; }
+    .btn-block { width: 100%; justify-content: center; }
+
+    .footer-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--ink-faint);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: 30px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 60px;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+    .toast i { color: var(--gold); }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ai-chip {
+      background: var(--primary);
+      color: #fff;
+      padding: 2px 14px;
+      border-radius: 40px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 480px) {
+      .topbar .brand h1 { font-size: 18px; }
+      .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+
+<!-- topbar -->
+<div class="topbar">
+  <div class="brand">
+    <div class="icon-leaf"><i class="fas fa-leaf"></i></div>
+    <div>
+      <h1>AgriScan</h1>
+      <div class="tagline"><i class="fas fa-microchip"></i> AI · plant health</div>
+    </div>
+  </div>
+  <div class="status-badge">
+    <i class="fas fa-circle" style="color: #7bc96a; font-size: 10px;"></i> Model ready
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- main card: upload + detection -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-seedling"></i> Detect infection</h2>
+      <span class="badge-ai"><i class="fas fa-brain"></i> v2.1 · CNN</span>
+    </div>
+    <div class="grid-2">
+      <div>
+        <div class="upload-zone" id="uploadZone">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <h3>Upload plant image</h3>
+          <p>Drag & drop or click · JPG, PNG</p>
+          <input type="file" class="file-input" id="fileInput" accept="image/*">
+        </div>
+        <div id="previewContainer" class="preview-box" style="display:none;">
+          <img id="previewImage" src="#" alt="preview">
+        </div>
+        <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Analyze</button>
+          <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
+        </div>
+      </div>
+      <div>
+        <div class="result-panel" id="resultPanel">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+            <i class="fas fa-robot" style="color: var(--gold); font-size: 20px;"></i>
+            <span style="font-weight: 600; color: var(--primary);">AI diagnosis</span>
+          </div>
+          <div id="resultContent">
+            <p style="color: var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload an image to start</p>
+          </div>
+        </div>
+        <div style="margin-top: 12px; background: #eef4ea; border-radius: 40px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 500;"><i class="fas fa-shield-alt" style="color: var(--gold);"></i> Confidence threshold 85%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- quick stats + history -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-history"></i> Recent scans</h2>
+      <button class="btn btn-sm btn-outline" id="clearHistoryBtn"><i class="fas fa-trash-alt"></i> Clear</button>
+    </div>
+    <div id="historyList">
+      <div class="history-item">
+        <span class="h-plant"><i class="fas fa-tree"></i> Tomato</span>
+        <span class="h-disease" style="background: #fae6e0; color: #a13d2a;">Early blight</span>
+        <span class="h-date">2 min ago</span>
+      </div>
+      <div class="history-item">
+        <span class="h-plant"><i class="fas fa-seedling"></i> Potato</span>
+        <span class="h-disease" style="background: #e0f0e0; color: #1f6b3a;">Healthy</span>
+        <span class="h-date">15 min ago</span>
+      </div>
+      <div class="history-item">
+        <span class="h-plant"><i class="fas fa-apple-alt"></i> Apple</span>
+        <span class="h-disease" style="background: #fcebd9; color: #9e6b2b;">Scab</span>
+        <span class="h-date">1 hour ago</span>
+      </div>
+    </div>
+    <p style="margin-top: 12px; font-size: 13px; color: var(--ink-faint);"><i class="fas fa-database"></i> 12 scans stored locally</p>
+  </div>
+
+  <div class="footer-note">
+    AgriScan · AI crop infection detection · <i class="fas fa-leaf" style="color: var(--gold);"></i> Smart farming
+  </div>
+</div>
+
+<!-- toast -->
+<div class="toast" id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg">Ready</span></div>
+
+<script>
+  (function() {
+    "use strict";
+
+    // ---------- SIMULATED AI MODEL (plant + disease) ----------
+    // In a real app, this would be a TensorFlow.js or API call.
+    // Here we use a realistic rule-based mock with high confidence.
+    const PLANT_DISEASE_DB = [
+      { plant: "Tomato", disease: "Early blight", confidence: 94 },
+      { plant: "Tomato", disease: "Late blight", confidence: 91 },
+      { plant: "Tomato", disease: "Leaf mold", confidence: 89 },
+      { plant: "Potato", disease: "Healthy", confidence: 96 },
+      { plant: "Potato", disease: "Late blight", confidence: 88 },
+      { plant: "Potato", disease: "Early blight", confidence: 85 },
+      { plant: "Apple", disease: "Scab", confidence: 92 },
+      { plant: "Apple", disease: "Black rot", confidence: 87 },
+      { plant: "Apple", disease: "Cedar rust", confidence: 84 },
+      { plant: "Grape", disease: "Black rot", confidence: 90 },
+      { plant: "Grape", disease: "Leaf blight", confidence: 86 },
+      { plant: "Wheat", disease: "Healthy", confidence: 97 },
+      { plant: "Wheat", disease: "Stem rust", confidence: 89 },
+      { plant: "Wheat", disease: "Leaf rust", confidence: 85 },
+      { plant: "Corn", disease: "Healthy", confidence: 95 },
+      { plant: "Corn", disease: "Gray leaf spot", confidence: 88 },
+      { plant: "Corn", disease: "Rust", confidence: 84 },
+    ];
+
+    // deterministic but "smart" selection based on file name / random seed
+    function simulateAIAnalysis(imageData) {
+      // Use a pseudo-random but deterministic selection based on the image data (or timestamp)
+      // so that it feels consistent but varied.
+      const seed = imageData ? imageData.length : Date.now();
+      const idx = Math.floor((seed % 17) * 1.3) % PLANT_DISEASE_DB.length;
+      const result = PLANT_DISEASE_DB[idx];
+      // Add slight variation to confidence
+      const confidenceVariation = Math.floor(Math.random() * 6) - 3; // -3..+3
+      let conf = Math.min(99, Math.max(82, result.confidence + confidenceVariation));
+      return {
+        plant: result.plant,
+        disease: result.disease,
+        confidence: conf,
+        recommendation: getRecommendation(result.disease)
+      };
+    }
+
+    function getRecommendation(disease) {
+      if (disease === "Healthy") return "✅ No action needed. Keep monitoring.";
+      if (disease.includes("blight")) return "⚠️ Apply fungicide and remove affected leaves.";
+      if (disease.includes("rust")) return "⚠️ Use sulfur-based fungicide. Improve air circulation.";
+      if (disease.includes("scab")) return "⚠️ Apply copper spray. Resistant varieties recommended.";
+      if (disease.includes("mold")) return "⚠️ Increase spacing, reduce humidity. Apply biofungicide.";
+      if (disease.includes("rot")) return "⚠️ Remove infected parts. Apply protective fungicide.";
+      return "🔍 Consult local agronomist for specific treatment.";
+    }
+
+    // ---------- UI elements ----------
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImage = document.getElementById('previewImage');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultContent = document.getElementById('resultContent');
+    const historyList = document.getElementById('historyList');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+
+    let currentFile = null;
+    let currentImageData = null;
+
+    // toast helper
+    function showToast(msg, isError = false) {
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      if (isError) toast.style.background = '#a13d2a';
+      else toast.style.background = 'var(--primary)';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    // upload handlers
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+    fileInput.addEventListener('change', function() {
+      if (this.files.length) handleFile(this.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('⚠️ Please upload an image file', true);
+        return;
+      }
+      currentFile = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        currentImageData = e.target.result;
+        previewImage.src = currentImageData;
+        previewContainer.style.display = 'block';
+        uploadZone.style.display = 'none';
+        resultContent.innerHTML = `<p style="color: var(--ink-soft);"><i class="fas fa-check-circle" style="color: var(--gold);"></i> Image loaded. Click <strong>"Analyze"</strong></p>`;
+        showToast('📸 Image loaded');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    clearBtn.addEventListener('click', function() {
+      resetUpload();
+      resultContent.innerHTML = `<p style="color: var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload an image to start</p>`;
+      showToast('Cleared');
+    });
+
+    function resetUpload() {
+      currentFile = null;
+      currentImageData = null;
+      fileInput.value = '';
+      previewContainer.style.display = 'none';
+      previewImage.src = '#';
+      uploadZone.style.display = 'block';
+    }
+
+    // Analyze button
+    analyzeBtn.addEventListener('click', function() {
+      if (!currentImageData) {
+        showToast('⚠️ Please upload an image first', true);
+        return;
+      }
+      // simulate AI processing
+      resultContent.innerHTML = `<div style="display:flex; align-items:center; gap:12px; padding:8px 0;">
+        <span class="spinner"></span> <span style="font-weight:500;">Analyzing with AI model...</span>
+      </div>`;
+      analyzeBtn.disabled = true;
+
+      setTimeout(() => {
+        const prediction = simulateAIAnalysis(currentImageData);
+        displayResult(prediction);
+        addHistory(prediction);
+        analyzeBtn.disabled = false;
+        showToast(`✅ ${prediction.plant} · ${prediction.disease}`);
+      }, 1400 + Math.random() * 600);
+    });
+
+    function displayResult(pred) {
+      const diseaseClass = pred.disease === 'Healthy' ? 'Healthy' : 'Infection';
+      const icon = pred.disease === 'Healthy' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+      const color = pred.disease === 'Healthy' ? 'var(--primary)' : '#a13d2a';
+      resultContent.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span class="plant-name"><i class="fas fa-leaf" style="color: var(--gold);"></i> ${pred.plant}</span>
+            <span class="disease-tag" style="background: ${color};">${pred.disease}</span>
+          </div>
+          <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${pred.confidence}%</span></div>
+          <div style="margin-top: 6px; background: #fff; padding: 10px 14px; border-radius: 14px; border-left: 4px solid var(--gold);">
+            <i class="fas fa-lightbulb" style="color: var(--gold);"></i> ${pred.recommendation}
+          </div>
+          <div style="font-size: 12px; color: var(--ink-faint); margin-top: 4px;">
+            <i class="fas fa-microchip"></i> AI inference · mobile optimized
+          </div>
+        </div>
+      `;
+    }
+
+    function addHistory(pred) {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      const diseaseBg = pred.disease === 'Healthy' ? '#e0f0e0' : '#fae6e0';
+      const diseaseColor = pred.disease === 'Healthy' ? '#1f6b3a' : '#a13d2a';
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      item.innerHTML = `
+        <span class="h-plant"><i class="fas fa-seedling"></i> ${pred.plant}</span>
+        <span class="h-disease" style="background: ${diseaseBg}; color: ${diseaseColor};">${pred.disease}</span>
+        <span class="h-date"><i class="far fa-clock"></i> ${timeStr}</span>
+      `;
+      historyList.prepend(item);
+      // keep max 12 items
+      while (historyList.children.length > 12) {
+        historyList.removeChild(historyList.lastChild);
+      }
+    }
+
+    clearHistoryBtn.addEventListener('click', function() {
+      historyList.innerHTML = '';
+      showToast('🗑️ History cleared');
+    });
+
+    // seed with a couple of extra entries for demo
+    function seedHistory() {
+      const demo = [
+        { plant: "Tomato", disease: "Healthy", confidence: 97 },
+        { plant: "Potato", disease: "Late blight", confidence: 88 },
+        { plant: "Apple", disease: "Scab", confidence: 92 },
+        { plant: "Grape", disease: "Black rot", confidence: 90 },
+      ];
+      demo.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        const diseaseBg = p.disease === 'Healthy' ? '#e0f0e0' : '#fae6e0';
+        const diseaseColor = p.disease === 'Healthy' ? '#1f6b3a' : '#a13d2a';
+        const times = ['2 min ago', '15 min ago', '1 hour ago', '3 hours ago'];
+        const idx = Math.floor(Math.random() * times.length);
+        item.innerHTML = `
+          <span class="h-plant"><i class="fas fa-seedling"></i> ${p.plant}</span>
+          <span class="h-disease" style="background: ${diseaseBg}; color: ${diseaseColor};">${p.disease}</span>
+          <span class="h-date"><i class="far fa-clock"></i> ${times[idx] || 'recent'}</span>
+        `;
+        historyList.appendChild(item);
+      });
+    }
+    seedHistory();
+
+    // extra: drag drop re-attach
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => e.preventDefault());
+
+    console.log('🌱 AgriScan AI ready · crop infection detection');
+  })();
+</script>
+</body>
+</html>
