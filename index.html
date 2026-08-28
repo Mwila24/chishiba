@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
   <title>AgriScan · Crop Infection Detector</title>
   <meta name="theme-color" content="#1e3c2c">
-  <meta name="description" content="AI-powered crop infection detection & plant identification.">
+  <meta name="description" content="AI-powered crop infection detection with Supabase cloud database.">
   <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,600&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
       --primary: #1e3c2c;
       --primary-light: #2b5a3e;
@@ -58,8 +56,6 @@
       white-space: nowrap;
       pointer-events: none;
     }
-
-    /* top bar */
     .topbar {
       background: linear-gradient(135deg, #1e3c2c, #2b5a3e);
       border-bottom: 3px solid var(--gold);
@@ -74,11 +70,7 @@
       top: 0;
       z-index: 30;
     }
-    .topbar .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .topbar .brand { display: flex; align-items: center; gap: 12px; }
     .topbar .brand .icon-leaf {
       font-size: 32px;
       color: var(--gold);
@@ -117,16 +109,8 @@
       align-items: center;
       gap: 6px;
     }
-    .topbar .status-badge i {
-      color: var(--gold);
-    }
-
-    .shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 24px 16px 60px;
-    }
-
+    .topbar .status-badge i { color: var(--gold); }
+    .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
     .card {
       background: rgba(255,255,255,0.92);
       backdrop-filter: blur(4px);
@@ -155,9 +139,7 @@
       align-items: center;
       gap: 10px;
     }
-    .card-header h2 i {
-      color: var(--gold);
-    }
+    .card-header h2 i { color: var(--gold); }
     .card-header .badge-ai {
       background: var(--primary);
       color: #fff;
@@ -167,20 +149,9 @@
       font-weight: 600;
       letter-spacing: 0.3px;
     }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 20px;
-    }
-    @media (max-width: 720px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-    }
-
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
     .upload-zone {
       border: 2px dashed var(--border);
       border-radius: 20px;
@@ -190,32 +161,12 @@
       transition: 0.2s;
       cursor: pointer;
     }
-    .upload-zone:hover {
-      border-color: var(--gold);
-      background: var(--gold-tint);
-    }
-    .upload-zone.dragover {
-      border-color: var(--primary);
-      background: #e3f0e0;
-    }
-    .upload-zone i {
-      font-size: 48px;
-      color: var(--primary-light);
-      margin-bottom: 10px;
-    }
-    .upload-zone h3 {
-      font-family: var(--font-display);
-      font-weight: 450;
-      color: var(--primary);
-    }
-    .upload-zone p {
-      color: var(--ink-faint);
-      font-size: 14px;
-    }
-    .file-input {
-      display: none;
-    }
-
+    .upload-zone:hover { border-color: var(--gold); background: var(--gold-tint); }
+    .upload-zone.dragover { border-color: var(--primary); background: #e3f0e0; }
+    .upload-zone i { font-size: 48px; color: var(--primary-light); margin-bottom: 10px; }
+    .upload-zone h3 { font-family: var(--font-display); font-weight: 450; color: var(--primary); }
+    .upload-zone p { color: var(--ink-faint); font-size: 14px; }
+    .file-input { display: none; }
     .preview-box {
       margin-top: 18px;
       border-radius: 16px;
@@ -237,11 +188,7 @@
       margin-top: 12px;
       border-left: 6px solid var(--gold);
     }
-    .result-panel .plant-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary);
-    }
+    .result-panel .plant-name { font-size: 20px; font-weight: 700; color: var(--primary); }
     .result-panel .disease-tag {
       display: inline-block;
       background: var(--primary);
@@ -252,16 +199,8 @@
       font-weight: 600;
       margin-top: 4px;
     }
-    .result-panel .confidence {
-      font-size: 14px;
-      color: var(--ink-soft);
-      margin-top: 6px;
-    }
-    .result-panel .confidence span {
-      font-weight: 700;
-      color: var(--primary);
-    }
-
+    .result-panel .confidence { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
+    .result-panel .confidence span { font-weight: 700; color: var(--primary); }
     .history-item {
       background: var(--surface);
       border-radius: 14px;
@@ -273,22 +212,27 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
+      transition: 0.15s;
     }
-    .history-item .h-plant {
-      font-weight: 600;
-      color: var(--primary);
-    }
+    .history-item:hover { background: #fafcf8; }
+    .history-item .h-plant { font-weight: 600; color: var(--primary); }
     .history-item .h-disease {
       background: #eef3ea;
       padding: 2px 14px;
       border-radius: 40px;
       font-size: 13px;
     }
-    .history-item .h-date {
+    .history-item .h-date { color: var(--ink-faint); font-size: 12px; }
+    .history-item .h-delete {
+      background: none;
+      border: none;
       color: var(--ink-faint);
-      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 30px;
+      transition: 0.15s;
     }
-
+    .history-item .h-delete:hover { background: #fce4e4; color: #a13d2a; }
     .btn {
       border: none;
       padding: 12px 24px;
@@ -314,7 +258,8 @@
     .btn-outline:hover { background: var(--gold-tint); }
     .btn-sm { padding: 8px 16px; font-size: 12px; }
     .btn-block { width: 100%; justify-content: center; }
-
+    .btn-danger { background: #a13d2a; color: #fff; }
+    .btn-danger:hover { background: #7f2f1f; }
     .footer-note {
       text-align: center;
       font-size: 12px;
@@ -323,7 +268,6 @@
       padding-top: 20px;
       margin-top: 30px;
     }
-
     .toast {
       position: fixed;
       bottom: 30px;
@@ -346,7 +290,6 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
     .toast i { color: var(--gold); }
-
     .spinner {
       display: inline-block;
       width: 20px;
@@ -357,7 +300,6 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     .ai-chip {
       background: var(--primary);
       color: #fff;
@@ -368,7 +310,38 @@
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
-
+    .db-stats {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .db-stat-item {
+      background: var(--surface);
+      padding: 6px 16px;
+      border-radius: 40px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+    .db-stat-item strong { color: var(--primary); }
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #d4e8d0;
+    }
+    .connection-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .connection-status .dot.online { background: #7bc96a; }
+    .connection-status .dot.offline { background: #e8898f; }
+    .connection-status .dot.connecting { background: #f0b34b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
     @media (max-width: 480px) {
       .topbar .brand h1 { font-size: 18px; }
       .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; }
@@ -388,8 +361,11 @@
       <div class="tagline"><i class="fas fa-microchip"></i> AI · plant health</div>
     </div>
   </div>
-  <div class="status-badge">
-    <i class="fas fa-circle" style="color: #7bc96a; font-size: 10px;"></i> Model ready
+  <div class="status-badge" id="dbStatus">
+    <span class="connection-status">
+      <span class="dot connecting" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </span>
   </div>
 </div>
 
@@ -434,34 +410,30 @@
     </div>
   </div>
 
-  <!-- quick stats + history -->
+  <!-- history + database -->
   <div class="card">
     <div class="card-header">
-      <h2><i class="fas fa-history"></i> Recent scans</h2>
-      <button class="btn btn-sm btn-outline" id="clearHistoryBtn"><i class="fas fa-trash-alt"></i> Clear</button>
+      <h2><i class="fas fa-history"></i> Scan history <span style="font-size: 14px; font-weight: 400; color: var(--ink-faint);" id="historyCount">(0)</span></h2>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-sm btn-outline" id="refreshHistoryBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn btn-sm btn-danger" id="clearHistoryBtn"><i class="fas fa-trash-alt"></i> Clear all</button>
+      </div>
     </div>
     <div id="historyList">
-      <div class="history-item">
-        <span class="h-plant"><i class="fas fa-tree"></i> Tomato</span>
-        <span class="h-disease" style="background: #fae6e0; color: #a13d2a;">Early blight</span>
-        <span class="h-date">2 min ago</span>
-      </div>
-      <div class="history-item">
-        <span class="h-plant"><i class="fas fa-seedling"></i> Potato</span>
-        <span class="h-disease" style="background: #e0f0e0; color: #1f6b3a;">Healthy</span>
-        <span class="h-date">15 min ago</span>
-      </div>
-      <div class="history-item">
-        <span class="h-plant"><i class="fas fa-apple-alt"></i> Apple</span>
-        <span class="h-disease" style="background: #fcebd9; color: #9e6b2b;">Scab</span>
-        <span class="h-date">1 hour ago</span>
+      <div style="text-align: center; padding: 20px; color: var(--ink-faint);">
+        <i class="fas fa-cloud" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>
+        Loading from Supabase...
       </div>
     </div>
-    <p style="margin-top: 12px; font-size: 13px; color: var(--ink-faint);"><i class="fas fa-database"></i> 12 scans stored locally</p>
+    <div class="db-stats">
+      <span class="db-stat-item"><i class="fas fa-file-alt"></i> Total scans: <strong id="totalScans">0</strong></span>
+      <span class="db-stat-item"><i class="fas fa-check-circle" style="color: #2b7a3e;"></i> Healthy: <strong id="healthyCount">0</strong></span>
+      <span class="db-stat-item"><i class="fas fa-exclamation-triangle" style="color: #a13d2a;"></i> Infections: <strong id="infectionCount">0</strong></span>
+    </div>
   </div>
 
   <div class="footer-note">
-    AgriScan · AI crop infection detection · <i class="fas fa-leaf" style="color: var(--gold);"></i> Smart farming
+    AgriScan · AI crop infection detection · <i class="fas fa-leaf" style="color: var(--gold);"></i> Smart farming · Data in Supabase cloud
   </div>
 </div>
 
@@ -472,9 +444,89 @@
   (function() {
     "use strict";
 
-    // ---------- SIMULATED AI MODEL (plant + disease) ----------
-    // In a real app, this would be a TensorFlow.js or API call.
-    // Here we use a realistic rule-based mock with high confidence.
+    // ---------- SUPABASE CONFIG ----------
+    const SUPABASE_URL = 'https://injvpbahfqltozrsqcmc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluanZwYmFoZnFsdG96cnNxY21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MDM0MzIsImV4cCI6MjEwMzQ3OTQzMn0.JoGibO2fqrw7sbmBbQ55EUKONQl94cqPTmkqxNoiXXk';
+
+    let supabase = null;
+    let isConnected = false;
+    let currentFile = null;
+    let currentImageData = null;
+
+    // DOM refs
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImage = document.getElementById('previewImage');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultContent = document.getElementById('resultContent');
+    const historyList = document.getElementById('historyList');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+    const totalScansEl = document.getElementById('totalScans');
+    const healthyCountEl = document.getElementById('healthyCount');
+    const infectionCountEl = document.getElementById('infectionCount');
+    const historyCountEl = document.getElementById('historyCount');
+
+    // ---------- TOAST ----------
+    function showToast(msg, isError = false) {
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      toast.style.background = isError ? '#a13d2a' : 'var(--primary)';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    // ---------- CONNECTION STATUS ----------
+    function setConnectionStatus(status, message) {
+      statusDot.className = 'dot ' + status;
+      statusText.textContent = message;
+    }
+
+    // ---------- INIT SUPABASE ----------
+    function initSupabase() {
+      try {
+        if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+          setConnectionStatus('offline', 'SDK error');
+          showToast('⚠️ Supabase SDK not loaded', true);
+          return;
+        }
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        });
+
+        // Test connection
+        supabase.from('scans').select('id', { count: 'exact', head: true })
+          .then(({ error }) => {
+            if (error) {
+              setConnectionStatus('offline', 'Error');
+              showToast('❌ DB error: ' + error.message, true);
+              console.error('Supabase error:', error);
+              return;
+            }
+            isConnected = true;
+            setConnectionStatus('online', 'Connected');
+            showToast('✅ Supabase connected');
+            loadHistory();
+          })
+          .catch(err => {
+            setConnectionStatus('offline', 'Error');
+            showToast('❌ Connection failed: ' + err.message, true);
+            console.error(err);
+          });
+      } catch (e) {
+        setConnectionStatus('offline', 'Error');
+        showToast('❌ Init error: ' + e.message, true);
+        console.error(e);
+      }
+    }
+
+    // ---------- AI MODEL (simulated) ----------
     const PLANT_DISEASE_DB = [
       { plant: "Tomato", disease: "Early blight", confidence: 94 },
       { plant: "Tomato", disease: "Late blight", confidence: 91 },
@@ -495,15 +547,11 @@
       { plant: "Corn", disease: "Rust", confidence: 84 },
     ];
 
-    // deterministic but "smart" selection based on file name / random seed
     function simulateAIAnalysis(imageData) {
-      // Use a pseudo-random but deterministic selection based on the image data (or timestamp)
-      // so that it feels consistent but varied.
       const seed = imageData ? imageData.length : Date.now();
       const idx = Math.floor((seed % 17) * 1.3) % PLANT_DISEASE_DB.length;
       const result = PLANT_DISEASE_DB[idx];
-      // Add slight variation to confidence
-      const confidenceVariation = Math.floor(Math.random() * 6) - 3; // -3..+3
+      const confidenceVariation = Math.floor(Math.random() * 6) - 3;
       let conf = Math.min(99, Math.max(82, result.confidence + confidenceVariation));
       return {
         plant: result.plant,
@@ -523,33 +571,101 @@
       return "🔍 Consult local agronomist for specific treatment.";
     }
 
-    // ---------- UI elements ----------
-    const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
-    const previewContainer = document.getElementById('previewContainer');
-    const previewImage = document.getElementById('previewImage');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const resultContent = document.getElementById('resultContent');
-    const historyList = document.getElementById('historyList');
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    const toast = document.getElementById('toast');
-    const toastMsg = document.getElementById('toastMsg');
-
-    let currentFile = null;
-    let currentImageData = null;
-
-    // toast helper
-    function showToast(msg, isError = false) {
-      toastMsg.textContent = msg;
-      toast.classList.add('show');
-      if (isError) toast.style.background = '#a13d2a';
-      else toast.style.background = 'var(--primary)';
-      clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    // ---------- SUPABASE CRUD ----------
+    async function addScanToDB(scanData) {
+      if (!supabase || !isConnected) throw new Error('Supabase not connected');
+      const { data, error } = await supabase.from('scans').insert([scanData]).select();
+      if (error) throw error;
+      return data;
     }
 
-    // upload handlers
+    async function getAllScans() {
+      if (!supabase || !isConnected) throw new Error('Supabase not connected');
+      const { data, error } = await supabase.from('scans').select('*').order('timestamp', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function deleteScanFromDB(id) {
+      if (!supabase || !isConnected) throw new Error('Supabase not connected');
+      const { error } = await supabase.from('scans').delete().eq('id', id);
+      if (error) throw error;
+    }
+
+    async function clearAllScans() {
+      if (!supabase || !isConnected) throw new Error('Supabase not connected');
+      const { error } = await supabase.from('scans').delete().neq('id', 0);
+      if (error) throw error;
+    }
+
+    // ---------- RENDER HISTORY ----------
+    async function loadHistory() {
+      try {
+        const scans = await getAllScans();
+        historyList.innerHTML = '';
+        if (!scans || scans.length === 0) {
+          historyList.innerHTML = `
+            <div style="text-align: center; padding: 30px 20px; color: var(--ink-faint);">
+              <i class="fas fa-leaf" style="font-size: 32px; display: block; margin-bottom: 10px;"></i>
+              <p>No scans yet. Upload an image to get started.</p>
+            </div>
+          `;
+        } else {
+          scans.forEach(scan => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            const diseaseBg = scan.disease === 'Healthy' ? '#e0f0e0' : '#fae6e0';
+            const diseaseColor = scan.disease === 'Healthy' ? '#1f6b3a' : '#a13d2a';
+            const date = new Date(scan.timestamp);
+            const timeStr = date.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+            item.innerHTML = `
+              <span class="h-plant"><i class="fas fa-seedling"></i> ${scan.plant}</span>
+              <span class="h-disease" style="background: ${diseaseBg}; color: ${diseaseColor};">${scan.disease}</span>
+              <span class="h-date"><i class="far fa-clock"></i> ${timeStr}</span>
+              <button class="h-delete" data-id="${scan.id}" title="Delete"><i class="fas fa-times"></i></button>
+            `;
+            historyList.appendChild(item);
+          });
+          // attach delete events
+          document.querySelectorAll('.h-delete').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+              e.stopPropagation();
+              const id = this.dataset.id;
+              if (!confirm('Delete this scan record?')) return;
+              try {
+                await deleteScanFromDB(id);
+                showToast('🗑️ Scan deleted');
+                loadHistory();
+                updateStats();
+              } catch (err) {
+                showToast('❌ Error: ' + err.message, true);
+              }
+            });
+          });
+        }
+        historyCountEl.textContent = `(${scans ? scans.length : 0})`;
+        updateStats();
+      } catch (err) {
+        console.error('Load history error:', err);
+        historyList.innerHTML = `<div style="padding:20px;color:var(--ink-faint);">⚠️ Could not load history: ${err.message}</div>`;
+      }
+    }
+
+    async function updateStats() {
+      try {
+        const scans = await getAllScans();
+        const total = scans ? scans.length : 0;
+        const healthy = scans ? scans.filter(s => s.disease === 'Healthy').length : 0;
+        const infections = total - healthy;
+        totalScansEl.textContent = total;
+        healthyCountEl.textContent = healthy;
+        infectionCountEl.textContent = infections;
+      } catch (e) {
+        console.warn('Stats error', e);
+      }
+    }
+
+    // ---------- UPLOAD HANDLERS ----------
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
     uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
@@ -598,30 +714,48 @@
       uploadZone.style.display = 'block';
     }
 
-    // Analyze button
-    analyzeBtn.addEventListener('click', function() {
+    // ---------- ANALYZE ----------
+    analyzeBtn.addEventListener('click', async function() {
       if (!currentImageData) {
         showToast('⚠️ Please upload an image first', true);
         return;
       }
-      // simulate AI processing
+      if (!isConnected) {
+        showToast('⚠️ Supabase not connected. Please refresh.', true);
+        return;
+      }
+
       resultContent.innerHTML = `<div style="display:flex; align-items:center; gap:12px; padding:8px 0;">
         <span class="spinner"></span> <span style="font-weight:500;">Analyzing with AI model...</span>
       </div>`;
       analyzeBtn.disabled = true;
 
-      setTimeout(() => {
-        const prediction = simulateAIAnalysis(currentImageData);
-        displayResult(prediction);
-        addHistory(prediction);
-        analyzeBtn.disabled = false;
-        showToast(`✅ ${prediction.plant} · ${prediction.disease}`);
-      }, 1400 + Math.random() * 600);
+      setTimeout(async () => {
+        try {
+          const prediction = simulateAIAnalysis(currentImageData);
+          // save to Supabase
+          const scanRecord = {
+            plant: prediction.plant,
+            disease: prediction.disease,
+            confidence: prediction.confidence,
+            recommendation: prediction.recommendation,
+            timestamp: Date.now(),
+            image_data: currentImageData // store image as base64 (for demo)
+          };
+          await addScanToDB(scanRecord);
+          displayResult(prediction);
+          loadHistory();
+          showToast(`✅ ${prediction.plant} · ${prediction.disease}`);
+        } catch (err) {
+          showToast('❌ DB error: ' + err.message, true);
+          console.error(err);
+        } finally {
+          analyzeBtn.disabled = false;
+        }
+      }, 1200 + Math.random() * 500);
     });
 
     function displayResult(pred) {
-      const diseaseClass = pred.disease === 'Healthy' ? 'Healthy' : 'Infection';
-      const icon = pred.disease === 'Healthy' ? 'fa-check-circle' : 'fa-exclamation-triangle';
       const color = pred.disease === 'Healthy' ? 'var(--primary)' : '#a13d2a';
       resultContent.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -634,66 +768,52 @@
             <i class="fas fa-lightbulb" style="color: var(--gold);"></i> ${pred.recommendation}
           </div>
           <div style="font-size: 12px; color: var(--ink-faint); margin-top: 4px;">
-            <i class="fas fa-microchip"></i> AI inference · mobile optimized
+            <i class="fas fa-cloud"></i> Saved to Supabase cloud
           </div>
         </div>
       `;
     }
 
-    function addHistory(pred) {
-      const item = document.createElement('div');
-      item.className = 'history-item';
-      const diseaseBg = pred.disease === 'Healthy' ? '#e0f0e0' : '#fae6e0';
-      const diseaseColor = pred.disease === 'Healthy' ? '#1f6b3a' : '#a13d2a';
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      item.innerHTML = `
-        <span class="h-plant"><i class="fas fa-seedling"></i> ${pred.plant}</span>
-        <span class="h-disease" style="background: ${diseaseBg}; color: ${diseaseColor};">${pred.disease}</span>
-        <span class="h-date"><i class="far fa-clock"></i> ${timeStr}</span>
-      `;
-      historyList.prepend(item);
-      // keep max 12 items
-      while (historyList.children.length > 12) {
-        historyList.removeChild(historyList.lastChild);
+    // ---------- HISTORY CONTROLS ----------
+    clearHistoryBtn.addEventListener('click', async function() {
+      if (!confirm('Delete ALL scan history from Supabase? This cannot be undone.')) return;
+      try {
+        await clearAllScans();
+        showToast('🗑️ All history cleared');
+        loadHistory();
+      } catch (err) {
+        showToast('❌ Error: ' + err.message, true);
       }
-    }
-
-    clearHistoryBtn.addEventListener('click', function() {
-      historyList.innerHTML = '';
-      showToast('🗑️ History cleared');
     });
 
-    // seed with a couple of extra entries for demo
-    function seedHistory() {
-      const demo = [
-        { plant: "Tomato", disease: "Healthy", confidence: 97 },
-        { plant: "Potato", disease: "Late blight", confidence: 88 },
-        { plant: "Apple", disease: "Scab", confidence: 92 },
-        { plant: "Grape", disease: "Black rot", confidence: 90 },
-      ];
-      demo.forEach(p => {
-        const item = document.createElement('div');
-        item.className = 'history-item';
-        const diseaseBg = p.disease === 'Healthy' ? '#e0f0e0' : '#fae6e0';
-        const diseaseColor = p.disease === 'Healthy' ? '#1f6b3a' : '#a13d2a';
-        const times = ['2 min ago', '15 min ago', '1 hour ago', '3 hours ago'];
-        const idx = Math.floor(Math.random() * times.length);
-        item.innerHTML = `
-          <span class="h-plant"><i class="fas fa-seedling"></i> ${p.plant}</span>
-          <span class="h-disease" style="background: ${diseaseBg}; color: ${diseaseColor};">${p.disease}</span>
-          <span class="h-date"><i class="far fa-clock"></i> ${times[idx] || 'recent'}</span>
-        `;
-        historyList.appendChild(item);
-      });
-    }
-    seedHistory();
+    refreshHistoryBtn.addEventListener('click', function() {
+      loadHistory();
+      showToast('🔄 History refreshed');
+    });
 
-    // extra: drag drop re-attach
-    document.addEventListener('dragover', e => e.preventDefault());
-    document.addEventListener('drop', e => e.preventDefault());
+    // ---------- INIT ----------
+    initSupabase();
 
-    console.log('🌱 AgriScan AI ready · crop infection detection');
+    // Seed with sample data if empty (optional)
+    setTimeout(async () => {
+      try {
+        const scans = await getAllScans();
+        if (scans && scans.length === 0) {
+          // Add a couple of demo entries
+          const demoData = [
+            { plant: "Tomato", disease: "Early blight", confidence: 94, recommendation: "Apply fungicide", timestamp: Date.now() - 3600000 },
+            { plant: "Potato", disease: "Healthy", confidence: 97, recommendation: "No action needed", timestamp: Date.now() - 7200000 },
+            { plant: "Apple", disease: "Scab", confidence: 92, recommendation: "Apply copper spray", timestamp: Date.now() - 14400000 }
+          ];
+          for (const d of demoData) {
+            try { await addScanToDB(d); } catch(e) {}
+          }
+          loadHistory();
+        }
+      } catch(e) {}
+    }, 2000);
+
+    console.log('🌱 AgriScan with Supabase database initialized');
   })();
 </script>
 </body>
