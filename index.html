@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>AgriScan Zambia · Crop Leaf Database</title>
+  <title>AgriScan · Smart Leaf Diagnosis</title>
   <meta name="theme-color" content="#1e3c2c">
   <!-- TensorFlow.js + MobileNet (fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
@@ -13,64 +13,234 @@
   <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,600&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --primary: #1e3c2c; --primary-light: #2b5a3e; --gold: #d4a72c;
-      --gold-tint: #f8f0d5; --surface: #ffffff; --paper: #f4f7f2;
-      --ink: #15201a; --ink-soft: #3b4d3e; --ink-faint: #7c8a7a;
-      --border: #dce3d6; --shadow: 0 12px 32px rgba(0,20,10,0.10);
-      --radius: 24px; --font-display: 'Fraunces', serif; --font-body: 'Inter', sans-serif;
+      --primary: #1e3c2c;
+      --primary-light: #2b5a3e;
+      --gold: #d4a72c;
+      --gold-tint: #f8f0d5;
+      --surface: #ffffff;
+      --paper: #f4f7f2;
+      --ink: #15201a;
+      --ink-soft: #3b4d3e;
+      --ink-faint: #7c8a7a;
+      --border: #dce3d6;
+      --shadow: 0 12px 32px rgba(0,20,10,0.10);
+      --radius: 20px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
+    body { font-family: var(--font); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
     .bg-pattern { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 20% 30%, #eaf3e5 0%, #d6e4d0 70%, #c2d4ba 100%); opacity: 0.5; }
-    .bg-pattern::after { content: "🇿🇲🍃🌿"; font-size: 120px; position: absolute; right: -20px; bottom: -20px; opacity: 0.06; letter-spacing: 20px; white-space: nowrap; pointer-events: none; }
+
     .topbar {
-      background: linear-gradient(135deg, #1e3c2c, #2b5a3e); border-bottom: 3px solid var(--gold);
-      padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px;
-      box-shadow: var(--shadow); position: sticky; top: 0; z-index: 30;
+      background: linear-gradient(135deg, #1e3c2c, #2b5a3e);
+      border-bottom: 3px solid var(--gold);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 30;
     }
     .topbar .brand { display: flex; align-items: center; gap: 12px; }
-    .topbar .brand .icon-leaf { font-size: 32px; color: var(--gold); background: rgba(255,255,255,0.08); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); }
-    .topbar .brand h1 { font-family: var(--font-display); font-weight: 600; font-size: 22px; color: #fff; letter-spacing: -0.3px; }
-    .topbar .brand .tagline { font-size: 11px; color: var(--gold); letter-spacing: 0.8px; text-transform: uppercase; font-weight: 500; }
-    .topbar .status-badge { background: rgba(255,255,255,0.08); padding: 6px 16px; border-radius: 60px; color: #d4e8d0; font-size: 12px; font-weight: 500; border: 1px solid rgba(212,167,44,0.3); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
-    .card {
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(4px); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 24px 22px; margin-bottom: 20px; box-shadow: var(--shadow);
-      border-top: 4px solid var(--gold); transition: 0.2s ease;
+    .topbar .brand .icon-leaf {
+      font-size: 28px;
+      color: var(--gold);
+      background: rgba(255,255,255,0.08);
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--gold);
     }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
-    .card-header h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .topbar .brand h1 {
+      font-weight: 700;
+      font-size: 22px;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .topbar .brand .tagline {
+      font-size: 11px;
+      color: var(--gold);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .topbar .right-cluster {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .lang-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(212,167,44,0.3);
+      border-radius: 60px;
+      padding: 4px 10px 4px 14px;
+    }
+    .lang-select-wrap i { color: var(--gold); font-size: 12px; }
+    #langSelect {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+      padding: 4px 2px;
+    }
+    #langSelect option { color: #15201a; background: #fff; }
+    .topbar .status-badge {
+      background: rgba(255,255,255,0.08);
+      padding: 6px 16px;
+      border-radius: 60px;
+      color: #d4e8d0;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid rgba(212,167,44,0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .topbar .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      background: #7bc96a;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .shell { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+
+    .card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      border-top: 4px solid var(--gold);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .card-header h2 {
+      font-weight: 600;
+      font-size: 20px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .card-header h2 i { color: var(--gold); }
-    .badge-ai { background: var(--primary); color: #fff; padding: 4px 14px; border-radius: 40px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+    .badge-ai {
+      background: var(--primary);
+      color: #fff;
+      padding: 4px 14px;
+      border-radius: 40px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
     .upload-zone {
-      border: 2px dashed var(--border); border-radius: 20px; padding: 30px 20px; text-align: center;
-      background: var(--paper); transition: 0.2s; cursor: pointer;
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 30px 20px;
+      text-align: center;
+      background: var(--paper);
+      transition: 0.2s;
+      cursor: pointer;
     }
     .upload-zone:hover { border-color: var(--gold); background: var(--gold-tint); }
     .upload-zone.dragover { border-color: var(--primary); background: #e3f0e0; }
     .upload-zone i { font-size: 48px; color: var(--primary-light); margin-bottom: 10px; }
-    .upload-zone h3 { font-family: var(--font-display); font-weight: 450; color: var(--primary); }
+    .upload-zone h3 { font-weight: 500; color: var(--primary); }
     .upload-zone p { color: var(--ink-faint); font-size: 14px; }
     .file-input { display: none; }
-    .preview-box { margin-top: 18px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.04); position: relative; }
-    .preview-box img { width: 100%; max-height: 350px; object-fit: contain; background: #f0f5eb; display: block; }
-    .result-panel { background: var(--gold-tint); border-radius: 16px; padding: 16px 20px; margin-top: 12px; border-left: 6px solid var(--gold); }
-    .result-panel .plant-name { font-size: 20px; font-weight: 700; color: var(--primary); }
-    .result-panel .disease-tag { display: inline-block; padding: 4px 16px; border-radius: 40px; font-size: 13px; font-weight: 600; margin-top: 4px; }
-    .result-panel .confidence { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
+
+    .preview-box {
+      margin-top: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      position: relative;
+    }
+    .preview-box img {
+      width: 100%;
+      max-height: 350px;
+      object-fit: contain;
+      background: #f0f5eb;
+      display: block;
+    }
+
+    .result-panel {
+      background: var(--gold-tint);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-top: 12px;
+      border-left: 6px solid var(--gold);
+    }
+    .result-panel .plant-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .result-panel .disease-tag {
+      display: inline-block;
+      padding: 4px 16px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .result-panel .confidence {
+      font-size: 14px;
+      color: var(--ink-soft);
+      margin-top: 6px;
+    }
     .result-panel .confidence span { font-weight: 700; color: var(--primary); }
-    .result-panel .match-info { font-size: 12px; color: var(--ink-faint); margin-top: 4px; }
+
     .btn {
-      border: none; padding: 12px 24px; border-radius: 60px; font-weight: 600; font-size: 14px;
-      display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.15s ease;
-      font-family: var(--font-body); background: var(--primary); color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: 0.15s ease;
+      font-family: var(--font);
+      background: var(--primary);
+      color: #fff;
       box-shadow: 0 4px 12px rgba(30,60,44,0.25);
     }
     .btn:active { transform: scale(0.96); }
@@ -89,46 +259,137 @@
     .btn-camera:hover { background: linear-gradient(135deg, #1e3c2c, #143022); }
     .btn-gemini { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
     .btn-gemini:hover { background: linear-gradient(135deg, #1557b0, #1a73e8); }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .action-buttons .btn { flex: 1; min-width: 100px; justify-content: center; }
+
+    #cameraVideo {
+      width: 100%;
+      max-height: 350px;
+      border-radius: 12px;
+      background: #1a1a1a;
+      display: none;
+    }
+    .camera-controls {
+      display: none;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .camera-controls .btn { min-width: 120px; justify-content: center; }
+
+    .api-key-input {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: var(--paper);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+    .api-key-input input {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 14px;
+      border: 2px solid var(--border);
+      border-radius: 40px;
+      font-size: 13px;
+      font-family: var(--font);
+      outline: none;
+    }
+    .api-key-input input:focus { border-color: var(--gold); }
+    .api-key-input .hint {
+      font-size: 11px;
+      color: var(--ink-faint);
+      width: 100%;
+    }
+    .api-key-input .hint a { color: var(--gold); text-decoration: none; }
+    .api-key-input .hint a:hover { text-decoration: underline; }
+
     .toast {
-      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 60px; font-weight: 500;
-      box-shadow: var(--shadow); z-index: 999; opacity: 0; pointer-events: none; transition: 0.25s ease;
-      display: flex; align-items: center; gap: 10px; font-size: 14px;
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 60px;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
     .toast i { color: var(--gold); }
-    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .db-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-    .db-stat-item { background: var(--surface); padding: 6px 16px; border-radius: 40px; border: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
-    .db-stat-item strong { color: var(--primary); }
-    .connection-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #d4e8d0; }
-    .connection-status .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #d4e8d0;
+    }
+    .connection-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
     .connection-status .dot.online { background: #7bc96a; }
     .connection-status .dot.offline { background: #e8898f; }
     .connection-status .dot.connecting { background: #f0b34b; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .model-load { background: #eef4ea; border-radius: 40px; padding: 4px 14px; font-size: 12px; color: var(--ink-soft); }
-    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .action-buttons .btn { flex: 1; min-width: 100px; justify-content: center; }
-    #cameraVideo { width: 100%; max-height: 350px; border-radius: 16px; background: #1a1a1a; display: none; }
-    .camera-controls { display: none; gap: 10px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
-    .camera-controls .btn { min-width: 120px; justify-content: center; }
-    .reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
-    .reference-item { background: var(--surface); border-radius: 12px; padding: 8px; border: 2px solid var(--border); text-align: center; transition: 0.15s; }
-    .reference-item:hover { border-color: var(--gold); }
-    .reference-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
-    .reference-item .name { font-size: 11px; font-weight: 600; color: var(--primary); margin-top: 4px; }
-    .reference-item .count { font-size: 10px; color: var(--ink-faint); }
-    .history-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    .history-item .h-plant { font-weight: 600; color: var(--primary); min-width: 100px; }
-    .history-item .h-disease { padding: 2px 12px; border-radius: 20px; font-size: 12px; background: #e0f0e0; color: #1f6b3a; }
-    .history-item .h-date { font-size: 12px; color: var(--ink-faint); margin-left: auto; }
-    .gemini-badge { background: linear-gradient(135deg, #4285f4, #34a853); color: white; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; margin-left: 6px; }
-    .api-key-input { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-    .api-key-input input { flex: 1; min-width: 200px; padding: 8px 14px; border: 2px solid var(--border); border-radius: 40px; font-size: 13px; font-family: var(--font-body); outline: none; }
-    .api-key-input input:focus { border-color: var(--gold); }
-    @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
+
+    .model-load {
+      background: #eef4ea;
+      border-radius: 40px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 16px 0 8px;
+      font-size: 12px;
+      color: var(--ink-faint);
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+    }
+    .footer i { color: var(--gold); }
+
+    @media (max-width: 480px) {
+      .topbar .brand h1 { font-size: 18px; }
+      .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 22px; }
+      .card { padding: 16px; }
+      .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; }
+      .api-key-input { padding: 10px 12px; }
+    }
   </style>
 </head>
 <body>
@@ -138,110 +399,97 @@
   <div class="brand">
     <div class="icon-leaf"><i class="fas fa-leaf"></i></div>
     <div>
-      <h1>AgriScan Zambia</h1>
-      <div class="tagline"><i class="fas fa-database"></i> Crop Leaf Database</div>
+      <h1>AgriScan</h1>
+      <div class="tagline"><i class="fas fa-microscope"></i> <span data-i18n="tagline">Smart Leaf Diagnosis</span></div>
     </div>
   </div>
-  <div class="status-badge" id="dbStatus">
-    <span class="connection-status">
-      <span class="dot connecting" id="statusDot"></span>
-      <span id="statusText">Connecting...</span>
-    </span>
-    <span class="model-load" id="modelStatus">⏳ loading...</span>
+  <div class="right-cluster">
+    <div class="lang-select-wrap">
+      <i class="fas fa-globe"></i>
+      <select id="langSelect" aria-label="Language">
+        <option value="en">English</option>
+        <option value="bem">Ichibemba</option>
+        <option value="nya">Chinyanja</option>
+        <option value="toi">Chitonga</option>
+        <option value="loz">Silozi</option>
+      </select>
+    </div>
+    <div class="status-badge" id="dbStatus">
+      <span class="connection-status">
+        <span class="dot connecting" id="statusDot"></span>
+        <span id="statusText" data-i18n="connConnecting">Connecting...</span>
+      </span>
+      <span class="model-load" id="modelStatus" data-i18n="modelLoading">⏳ loading...</span>
+    </div>
   </div>
 </div>
 
 <div class="shell">
-  <!-- main card -->
+  <!-- Main Card -->
   <div class="card">
     <div class="card-header">
-      <h2><i class="fas fa-seedling"></i> Identify & Detect <span class="zambia-flag">🇿🇲</span></h2>
-      <span class="badge-ai"><i class="fas fa-brain"></i> Gemini AI</span>
+      <h2><i class="fas fa-seedling"></i> <span data-i18n="cardTitle">Identify Your Crop</span></h2>
+      <span class="badge-ai"><i class="fas fa-brain"></i> <span data-i18n="aiPoweredBadge">AI Powered</span></span>
     </div>
     <div class="grid-2">
       <div>
         <div class="upload-zone" id="uploadZone">
           <i class="fas fa-cloud-upload-alt"></i>
-          <h3>Upload or take photo</h3>
-          <p>Drag & drop, click, or use camera</p>
+          <h3 data-i18n="uploadTitle">Upload or take photo</h3>
+          <p data-i18n="uploadSubtitle">Drag & drop, click, or use camera</p>
           <input type="file" class="file-input" id="fileInput" accept="image/*">
         </div>
         <video id="cameraVideo" autoplay playsinline></video>
         <div class="camera-controls" id="cameraControls">
-          <button class="btn btn-success" id="captureBtn"><i class="fas fa-camera"></i> Capture</button>
-          <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> Stop</button>
+          <button class="btn btn-success" id="captureBtn"><i class="fas fa-camera"></i> <span data-i18n="btnCapture">Capture</span></button>
+          <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> <span data-i18n="btnStop">Stop</span></button>
         </div>
         <div id="previewContainer" class="preview-box" style="display:none;">
           <img id="previewImage" src="#" alt="preview">
         </div>
         <div class="action-buttons">
-          <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> Camera</button>
-          <button class="btn btn-gemini" id="analyzeGeminiBtn"><i class="fab fa-google"></i> Analyze with Gemini</button>
-          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Local AI</button>
-          <button class="btn btn-success" id="saveRefBtn"><i class="fas fa-save"></i> Add to DB</button>
-          <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
+          <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> <span data-i18n="btnCamera">Camera</span></button>
+          <button class="btn btn-gemini" id="analyzeGeminiBtn"><i class="fab fa-google"></i> <span data-i18n="btnAnalyzeGemini">Analyze</span></button>
+          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> <span data-i18n="btnLocalAI">Local AI</span></button>
+          <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> <span data-i18n="btnClear">Clear</span></button>
         </div>
         <div class="api-key-input">
           <i class="fas fa-key" style="color:var(--gold);"></i>
-          <input type="password" id="geminiApiKey" placeholder="Enter Gemini API Key (optional, for better results)" style="flex:1;min-width:200px;">
-          <button class="btn btn-sm btn-gemini" id="saveApiKeyBtn"><i class="fas fa-save"></i> Save</button>
+          <input type="password" id="geminiApiKey" data-i18n-placeholder="apiKeyPlaceholder" placeholder="Enter Gemini API Key (optional)" style="flex:1;min-width:200px;">
+          <button class="btn btn-sm btn-gemini" id="saveApiKeyBtn"><i class="fas fa-save"></i> <span data-i18n="btnSave">Save</span></button>
+          <div class="hint">
+            <i class="fas fa-info-circle"></i> <span data-i18n="apiKeyHintPrefix">Get your free key at</span> <a href="https://ai.google.dev/gemini-api" target="_blank">ai.google.dev/gemini-api</a>
+          </div>
         </div>
-        <p style="font-size:11px;color:var(--ink-faint);margin-top:4px;"><i class="fas fa-info-circle"></i> Get your free API key at <a href="https://ai.google.dev/gemini-api" target="_blank" style="color:var(--gold);">ai.google.dev/gemini-api</a></p>
       </div>
       <div>
         <div class="result-panel" id="resultPanel">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <i class="fas fa-robot" style="color:var(--gold);font-size:20px;"></i>
-              <span style="font-weight:600;color:var(--primary);">Diagnosis</span>
+              <span style="font-weight:600;color:var(--primary);" data-i18n="diagnosisLabel">Diagnosis</span>
               <span id="analysisMethod" style="font-size:11px;color:var(--ink-faint);"></span>
             </div>
             <div>
-              <button class="btn btn-sm btn-warning" id="retryModelBtn"><i class="fas fa-sync-alt"></i> Reload AI</button>
+              <button class="btn btn-sm btn-warning" id="retryModelBtn"><i class="fas fa-sync-alt"></i> <span data-i18n="btnReloadAI">Reload AI</span></button>
             </div>
           </div>
           <div id="resultContent">
-            <p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>
+            <p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> <span data-i18n="promptUpload">Upload a leaf image to identify</span></p>
           </div>
         </div>
         <div style="margin-top:12px;background:#eef4ea;border-radius:40px;padding:8px 16px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:12px;font-weight:500;"><i class="fas fa-database" style="color:var(--gold);"></i> <span id="refCount">0</span> leaf references</span>
+          <span style="font-size:12px;font-weight:500;"><i class="fas fa-database" style="color:var(--gold);"></i> <span id="refCount">0</span> <span data-i18n="referencesLabel">references</span></span>
           <span style="font-size:11px;color:var(--ink-faint);">|</span>
-          <span style="font-size:11px;color:var(--ink-soft);"><i class="fas fa-corn"></i> Maize · Cassava · Groundnuts · Pumpkins · More</span>
+          <span style="font-size:11px;color:var(--ink-soft);"><i class="fas fa-corn"></i> Maize · Cassava · Groundnuts · Soybeans</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Reference Database -->
-  <div class="card">
-    <div class="card-header">
-      <h2><i class="fas fa-database"></i> Leaf Reference Database</h2>
-      <button class="btn btn-sm btn-danger" id="clearRefsBtn"><i class="fas fa-trash"></i> Clear All</button>
-    </div>
-    <div id="referenceGrid" class="reference-grid">
-      <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
-        <i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-        <p>No leaf references yet. Upload a leaf image and click "Add to DB"</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- history -->
-  <div class="card">
-    <div class="card-header">
-      <h2><i class="fas fa-history"></i> Scan history <span style="font-size:14px;font-weight:400;color:var(--ink-faint);" id="historyCount">(0)</span></h2>
-      <button class="btn btn-sm btn-outline" id="refreshHistoryBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-    </div>
-    <div id="historyList">
-      <div style="text-align:center;padding:20px;color:var(--ink-faint);">
-        <i class="fas fa-cloud" style="font-size:28px;display:block;margin-bottom:8px;"></i>
-        Loading from Supabase...
-      </div>
-    </div>
-  </div>
-  <div class="footer-note">
-    <i class="fas fa-leaf" style="color:var(--gold);"></i> AgriScan Zambia · Crop Leaf Database · AI Recognition
+  <!-- Footer -->
+  <div class="footer">
+    <i class="fas fa-leaf"></i> <span data-i18n="footerText">AgriScan · AI Crop Diagnosis · Powered by Gemini</span>
   </div>
 </div>
 
@@ -256,10 +504,201 @@
     let supabase = null;
     let isConnected = false;
 
+    // ================= I18N =================
+    // Best-effort translations for common Zambian languages.
+    // Any key not translated for a language automatically falls back to English.
+    const I18N = {
+      en: {
+        tagline: "Smart Leaf Diagnosis",
+        cardTitle: "Identify Your Crop",
+        aiPoweredBadge: "AI Powered",
+        uploadTitle: "Upload or take photo",
+        uploadSubtitle: "Drag & drop, click, or use camera",
+        btnCamera: "Camera", btnAnalyzeGemini: "Analyze", btnLocalAI: "Local AI",
+        btnClear: "Clear", btnCapture: "Capture", btnStop: "Stop",
+        btnReloadAI: "Reload AI", btnSave: "Save",
+        apiKeyPlaceholder: "Enter Gemini API Key (optional)",
+        apiKeyHintPrefix: "Get your free key at",
+        diagnosisLabel: "Diagnosis",
+        promptUpload: "Upload a leaf image to identify",
+        referencesLabel: "references",
+        footerText: "AgriScan · AI Crop Diagnosis · Powered by Gemini",
+        connConnecting: "Connecting...", connConnected: "Connected", connOffline: "Error", connSdkError: "SDK error",
+        modelLoading: "⏳ loading...", modelLoadingAI: "⏳ loading AI...", modelReady: "✅ AI ready", modelFallback: "⚠️ fallback mode",
+        toastAiLoaded: "🧠 AI model loaded",
+        toastAiFallback: "⚠️ AI fallback mode (image matching only)",
+        toastCameraNotSupported: "❌ Camera not supported",
+        toastCameraReady: "📷 Camera ready. Capture a leaf.",
+        toastCameraActive: "📷 Camera active",
+        toastCameraError: "❌ Camera error: {msg}",
+        toastStartCameraFirst: "❌ Start camera first",
+        toastPhotoCaptured: "📸 Photo captured",
+        toastImageLoaded: "📸 Image loaded",
+        toastUploadImageOnly: "⚠️ Please upload an image",
+        toastCleared: "Cleared",
+        toastUploadFirst: "⚠️ Please upload or capture an image first",
+        toastEnterApiKeyFirst: "⚠️ Please enter your Gemini API key first",
+        toastApiKeySaved: "✅ Gemini API key saved",
+        toastApiKeyInvalid: "⚠️ Please enter a valid API key",
+        toastGeminiUnavailable: "⚠️ Gemini unavailable, using Local AI instead",
+        toastGeminiBusyRetry: "⏳ {model} is busy, retrying...",
+        toastGeminiError: "❌ Gemini error: {msg}",
+        toastIdentified: "✅ Identified: {name}",
+        toastIdentifiedWithDisease: "✅ Identified: {name} - {disease}",
+        toastError: "❌ Error: {msg}",
+        toastDbError: "❌ DB error: {msg}",
+        toastAiReloaded: "✅ AI model reloaded",
+        toastAiFallbackMode: "⚠️ AI fallback mode",
+        photoCapturedClickAnalyze: "Photo captured. Click Analyze.",
+        imageLoadedClickAnalyze: "Image loaded. Click Analyze.",
+        resultConfidence: "Confidence", resultSymptoms: "Symptoms", resultLeafType: "Leaf type", resultRecommendation: "Recommendation",
+        resultBasedOnRefs: "Based on {n} reference images",
+        resultAnalyzingGemini: "🧠 Analyzing with Gemini AI...",
+        resultAnalyzingLocal: "Analyzing leaf locally...",
+        errorPrefix: "Error",
+        methodGeminiAI: "🔬 Gemini AI", methodLocalAI: "🔬 Local AI",
+        methodGeminiUnavailableSuffix: "(Gemini unavailable)", sourceBadgeGeminiBusy: "(Gemini busy)",
+        healthyLabel: "Healthy"
+      },
+      bem: {
+        tagline: "Ukwiluka kwa Mabula ne AI",
+        cardTitle: "Ishibeni Umulimwa Wenu",
+        aiPoweredBadge: "Ukubomfya AI",
+        uploadTitle: "Ikeni nangu mupende icikope",
+        uploadSubtitle: "Kokeni, cindikeni, nangu mubomfye kamera",
+        btnCamera: "Kamera", btnAnalyzeGemini: "Elenganya", btnLocalAI: "AI ya Pano",
+        btnClear: "Fumyako", btnCapture: "Pendeni", btnStop: "Imeni",
+        btnReloadAI: "Bwekesheniko AI", btnSave: "Sungeni",
+        apiKeyPlaceholder: "Ingishamo Gemini API Key (te yakupatikisha)",
+        apiKeyHintPrefix: "Sangeni key yenu ya fye pali",
+        diagnosisLabel: "Ubulwele",
+        promptUpload: "Ikeni icikope ca ibula pa kwishiba",
+        referencesLabel: "ifilangililo",
+        footerText: "AgriScan · Ukwishiba Ubulwele bwa Fimenwa · Ukubomba na Gemini",
+        connConnecting: "Ukulungika...", connConnected: "Nalungana", connOffline: "Icilubo",
+        modelLoading: "⏳ ukwingisha...", modelReady: "✅ AI naiba iyakuti", modelFallback: "⚠️ mu mikalile yalubulwa",
+        toastCleared: "Nafumishiwapo",
+        toastPhotoCaptured: "📸 Icikope capendwa",
+        toastImageLoaded: "📸 Icikope caingishiwa",
+        toastUploadFirst: "⚠️ Ingishamoko icikope ukutampa",
+        toastApiKeySaved: "✅ Gemini API key nayisungwa",
+        photoCapturedClickAnalyze: "Icikope capendwa. Cindikeni pa Elenganya.",
+        imageLoadedClickAnalyze: "Icikope caingishiwa. Cindikeni pa Elenganya.",
+        resultConfidence: "Ukucetekela", resultSymptoms: "Ifimoneka", resultLeafType: "Umusango wa bula", resultRecommendation: "Ukupanda amano",
+        healthyLabel: "Mubuumi Bwino"
+      },
+      nya: {
+        tagline: "Kudziwa Masamba Mwaluso",
+        cardTitle: "Dziwani Mbewu Yanu",
+        aiPoweredBadge: "Zothandizidwa ndi AI",
+        uploadTitle: "Tumizani kapena tengani chithunzi",
+        uploadSubtitle: "Kokerani, dinani, kapena gwiritsani kamera",
+        btnCamera: "Kamera", btnAnalyzeGemini: "Santhulani", btnLocalAI: "AI Yapafupi",
+        btnClear: "Chotsani", btnCapture: "Tengani", btnStop: "Imani",
+        btnReloadAI: "Yambitsaninso AI", btnSave: "Sungani",
+        apiKeyPlaceholder: "Lowetsani Gemini API Key (osafunika)",
+        apiKeyHintPrefix: "Peza kiyi yanu yaulere pa",
+        diagnosisLabel: "Matenda",
+        promptUpload: "Tumizani chithunzi cha tsamba kuti mudziwe",
+        referencesLabel: "zitsanzo",
+        footerText: "AgriScan · Kudziwa Matenda a Mbewu · Mothandizidwa ndi Gemini",
+        connConnecting: "Kulumikiza...", connConnected: "Yalumikizidwa", connOffline: "Vuto",
+        modelLoading: "⏳ kutsegula...", modelReady: "✅ AI yakonzeka", modelFallback: "⚠️ njira yachiwiri",
+        toastCleared: "Yachotsedwa",
+        toastPhotoCaptured: "📸 Chithunzi chatengedwa",
+        toastImageLoaded: "📸 Chithunzi chalowetsedwa",
+        toastUploadFirst: "⚠️ Chonde tumizani chithunzi choyamba",
+        toastApiKeySaved: "✅ Gemini API key yasungidwa",
+        photoCapturedClickAnalyze: "Chithunzi chatengedwa. Dinani Santhulani.",
+        imageLoadedClickAnalyze: "Chithunzi chalowetsedwa. Dinani Santhulani.",
+        resultConfidence: "Chidaliro", resultSymptoms: "Zizindikiro", resultLeafType: "Mtundu wa tsamba", resultRecommendation: "Malangizo",
+        healthyLabel: "Wathanzi"
+      },
+      toi: {
+        tagline: "Kuziba Matu a AI",
+        cardTitle: "Amuzibe Cilimwa Cenu",
+        aiPoweredBadge: "Kubelesya AI",
+        uploadTitle: "Amutume nanka amubweze cifwanikisyo",
+        uploadSubtitle: "Amukwelele, amunyampule, nanka amubelesye kamera",
+        btnCamera: "Kamera", btnAnalyzeGemini: "Amulange", btnLocalAI: "AI Yamuno",
+        btnClear: "Amugusye", btnCapture: "Amubweze", btnStop: "Amwime",
+        btnReloadAI: "Amutalike AI Alimwi", btnSave: "Amubike",
+        apiKeyPlaceholder: "Amunjizye Gemini API Key (teensi yeelede)",
+        apiKeyHintPrefix: "Amujane kiyi yenu yabuyo ku",
+        diagnosisLabel: "Bulwazi",
+        promptUpload: "Amutume cifwanikisyo ca matu kuti muzibe",
+        referencesLabel: "zikozyanyo",
+        footerText: "AgriScan · Kuziba Bulwazi bwa Zilimwa · Kwabelesyegwa Gemini",
+        connConnecting: "Kwaanzana...", connConnected: "Kwaanzene", connOffline: "Penzi",
+        modelLoading: "⏳ kuvwununa...", modelReady: "✅ AI yalibambila", modelFallback: "⚠️ nzila yabili",
+        toastCleared: "Kwagusigwa",
+        toastPhotoCaptured: "📸 Cifwanikisyo cabwezwa",
+        toastImageLoaded: "📸 Cifwanikisyo canjizigwa",
+        toastUploadFirst: "⚠️ Amutume cifwanikisyo kutalika",
+        toastApiKeySaved: "✅ Gemini API key yabikwa",
+        photoCapturedClickAnalyze: "Cifwanikisyo cabwezwa. Amunyampule Amulange.",
+        imageLoadedClickAnalyze: "Cifwanikisyo canjizigwa. Amunyampule Amulange.",
+        resultConfidence: "Lusyomo", resultSymptoms: "Zitondezyo", resultLeafType: "Musyobo wamatu", resultRecommendation: "Lulayo",
+        healthyLabel: "Wapona"
+      },
+      loz: {
+        tagline: "Ku Ziba Makwati ka Butali",
+        cardTitle: "Mu Zibe Zebyalilwe Kwa Mina",
+        aiPoweredBadge: "Ku Itusiswa AI",
+        uploadTitle: "Mu lumele kamba mu nge siswaniso",
+        uploadSubtitle: "Mu hohe, mu tobe, kamba mu itusise kamera",
+        btnCamera: "Kamera", btnAnalyzeGemini: "Mu Talime", btnLocalAI: "AI ya Mona",
+        btnClear: "Mu Felise", btnCapture: "Mu Nge", btnStop: "Mu Yemise",
+        btnReloadAI: "Mu Kale Sinca AI", btnSave: "Mu Buluke",
+        apiKeyPlaceholder: "Mu kenye Gemini API Key (haki ya tokwahala)",
+        apiKeyHintPrefix: "Mu fumane key ya mina ya mahala kwa",
+        diagnosisLabel: "Bulwazi",
+        promptUpload: "Mu lumele siswaniso sa lucwe kuli mu zibe",
+        referencesLabel: "litemuso",
+        footerText: "AgriScan · Ku Ziba Bulwazi bwa Limela · Ka Tuso ya Gemini",
+        connConnecting: "Ku Swalisana...", connConnected: "Ku Swalisani", connOffline: "Butata",
+        modelLoading: "⏳ ku kalisa...", modelReady: "✅ AI I Itukiselize", modelFallback: "⚠️ mukwa o muñwi",
+        toastCleared: "Ku Felisizwe",
+        toastPhotoCaptured: "📸 Siswaniso Si Ngilwe",
+        toastImageLoaded: "📸 Siswaniso Si Kenyizwe",
+        toastUploadFirst: "⚠️ Mu lumele siswaniso pili",
+        toastApiKeySaved: "✅ Gemini API key I Bulukilwe",
+        photoCapturedClickAnalyze: "Siswaniso si ngilwe. Mu tobe Mu Talime.",
+        imageLoadedClickAnalyze: "Siswaniso si kenyizwe. Mu tobe Mu Talime.",
+        resultConfidence: "Sepo", resultSymptoms: "Liponiso", resultLeafType: "Mufuta wa lucwe", resultRecommendation: "Kelezo",
+        healthyLabel: "Ya Iketile Hande"
+      }
+    };
+
+    let currentLang = localStorage.getItem('agriscan_lang') || 'en';
+
+    function t(key, params) {
+      let str = (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+      if (params) {
+        Object.keys(params).forEach(p => { str = str.replace('{' + p + '}', params[p]); });
+      }
+      return str;
+    }
+
+    function applyStaticTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = t(el.getAttribute('data-i18n'));
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+      });
+      document.documentElement.lang = currentLang;
+      // Refresh dynamic panels that were already rendered before the switch
+      if (!currentImageData) {
+        resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${t('promptUpload')}</p>`;
+      }
+      setConnectionStatus(statusDot.className.replace('dot ', ''), t(
+        isConnected ? 'connConnected' : (statusDot.classList.contains('connecting') ? 'connConnecting' : 'connOffline')
+      ));
+    }
+
     // ---------- GEMINI API ----------
     let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
-    // gemini-2.5-flash was retired for new API keys (Aug 2026). Try current models in order,
-    // falling back automatically if one 404s so this doesn't silently break again.
     const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
     const GEMINI_MODEL_CANDIDATES = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-2.5-flash'];
 
@@ -362,23 +801,23 @@
       const statusEl = document.getElementById('modelStatus');
       if (modelLoading) return false;
       modelLoading = true;
-      statusEl.textContent = '⏳ loading AI...';
-      
+      statusEl.textContent = t('modelLoadingAI');
+
       try {
         const loadPromise = mobilenet.load({ version: 2, alpha: 1.0 });
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 30000)
         );
         mobilenetModel = await Promise.race([loadPromise, timeoutPromise]);
         modelReady = true;
         modelLoading = false;
-        statusEl.textContent = '✅ AI ready';
-        showToast('🧠 AI model loaded');
+        statusEl.textContent = t('modelReady');
+        showToast(t('toastAiLoaded'));
         return true;
       } catch (err) {
         modelLoading = false;
-        statusEl.textContent = '⚠️ fallback mode';
-        showToast('⚠️ AI fallback mode (image matching only)', true);
+        statusEl.textContent = t('modelFallback');
+        showToast(t('toastAiFallback'), true);
         return false;
       }
     }
@@ -386,14 +825,13 @@
     // ---------- GEMINI API ANALYSIS ----------
     async function analyzeWithGemini(imageData) {
       if (!geminiApiKey) {
-        showToast('⚠️ Please enter your Gemini API key first', true);
+        showToast(t('toastEnterApiKeyFirst'), true);
         return null;
       }
 
       try {
-        // Convert base64 to proper format
         const base64Data = imageData.split(',')[1] || imageData;
-        
+
         const requestBody = {
           contents: [
             {
@@ -405,7 +843,7 @@
                   3. confidence: Percentage confidence (0-100) in your identification
                   4. recommendation: Brief treatment/prevention recommendation
                   5. symptoms: Brief description of visible symptoms
-                  
+
                   Respond ONLY with valid JSON.`
                 },
                 {
@@ -425,7 +863,6 @@
           }
         };
 
-        // Fetch with a hard timeout so a stuck request can't hang the UI forever.
         function fetchWithTimeout(url, options, ms) {
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), ms);
@@ -434,16 +871,13 @@
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        // Status codes worth retrying: 404 (wrong/retired model name -> try next model),
-        // 429 (rate limited) and 503 (temporarily overloaded) -> both worth a short
-        // backoff-and-retry before giving up on that model.
         let response = null;
         let lastError = null;
 
         outer:
         for (const model of GEMINI_MODEL_CANDIDATES) {
           const url = `${GEMINI_API_BASE}${model}:generateContent?key=${geminiApiKey}`;
-          const maxAttemptsForModel = 2; // one retry per model on overload/rate-limit
+          const maxAttemptsForModel = 2;
 
           for (let attempt = 1; attempt <= maxAttemptsForModel; attempt++) {
             try {
@@ -462,24 +896,21 @@
               lastError = new Error(`${model} → ${res.status}: ${errorText}`);
 
               if (res.status === 404) {
-                // Model doesn't exist for this key -> no point retrying, go to next model
                 break;
               }
               if (res.status === 429 || res.status === 503) {
                 if (attempt < maxAttemptsForModel) {
-                  showToast(`⏳ ${model} is busy, retrying...`);
+                  showToast(t('toastGeminiBusyRetry', { model }));
                   await sleep(1500);
-                  continue; // retry same model once
+                  continue;
                 }
-                break; // exhausted retries for this model, try the next one
+                break;
               }
-              // Any other error (bad key, safety block, etc.) won't be fixed by
-              // retrying or switching models — surface it immediately.
               throw lastError;
             } catch (innerErr) {
               if (innerErr.name === 'AbortError') {
                 lastError = new Error(`${model} timed out after 20s`);
-                break; // try next model
+                break;
               }
               if (innerErr === lastError || /404|429|503/.test(String(innerErr.message))) {
                 lastError = innerErr;
@@ -496,16 +927,14 @@
 
         const data = await response.json();
         const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
-        // Extract JSON from response
+
         const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           throw new Error('No valid JSON found in response');
         }
 
         const parsed = JSON.parse(jsonMatch[0]);
-        
-        // Map response to our format
+
         return {
           name: parsed.plant || 'Unknown',
           disease: parsed.disease || 'Pending',
@@ -517,21 +946,20 @@
         };
       } catch (err) {
         console.error('Gemini API Error:', err);
-        showToast('❌ Gemini error: ' + err.message, true);
+        showToast(t('toastGeminiError', { msg: err.message }), true);
         return null;
       }
     }
 
     // ---------- IDENTIFY LEAF (Local AI + Database) ----------
     async function identifyLeafLocal(imageElement) {
-      // Step 1: Try AI classification if available
       if (modelReady && mobilenetModel) {
         try {
           const predictions = await mobilenetModel.classify(imageElement);
           if (predictions && predictions.length > 0) {
             const topClass = predictions[0].className.toLowerCase();
             for (const crop of CROP_DATABASE) {
-              if (topClass.includes(crop.name.toLowerCase()) || 
+              if (topClass.includes(crop.name.toLowerCase()) ||
                   crop.aliases.some(a => topClass.includes(a))) {
                 return {
                   name: crop.name,
@@ -549,11 +977,10 @@
         }
       }
 
-      // Step 2: Database matching using image similarity
       if (leafReferences.length > 0) {
         let bestMatch = null;
         let bestSimilarity = 0;
-        
+
         for (const ref of leafReferences) {
           try {
             const refImg = new Image();
@@ -571,7 +998,7 @@
             }
           } catch (e) {}
         }
-        
+
         if (bestMatch && bestSimilarity > 0.3) {
           return {
             name: bestMatch.name,
@@ -585,7 +1012,6 @@
         }
       }
 
-      // Step 3: Fallback - use leaf shape analysis
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 100;
@@ -593,7 +1019,7 @@
       ctx.drawImage(imageElement, 0, 0, 100, 100);
       const imageData = ctx.getImageData(0, 0, 100, 100);
       const data = imageData.data;
-      
+
       let minX = 100, maxX = 0, minY = 100, maxY = 0;
       let pixelCount = 0;
       for (let y = 0; y < 100; y++) {
@@ -608,15 +1034,15 @@
           }
         }
       }
-      
+
       const width = maxX - minX + 1;
       const height = maxY - minY + 1;
       const aspectRatio = width / height;
       const density = pixelCount / (width * height);
-      
+
       let bestCrop = CROP_DATABASE[0];
       let bestScore = 0;
-      
+
       for (const crop of CROP_DATABASE) {
         let score = 0;
         const leafType = crop.leaf_type.toLowerCase();
@@ -632,7 +1058,7 @@
           bestCrop = crop;
         }
       }
-      
+
       return {
         name: bestCrop.name,
         confidence: Math.round(Math.min(95, 60 + bestScore * 40)),
@@ -657,44 +1083,45 @@
     const cameraBtn = document.getElementById('cameraBtn');
     const captureBtn = document.getElementById('captureBtn');
     const stopCameraBtn = document.getElementById('stopCameraBtn');
-    const saveRefBtn = document.getElementById('saveRefBtn');
     const retryModelBtn = document.getElementById('retryModelBtn');
     const cameraVideo = document.getElementById('cameraVideo');
     const cameraControls = document.getElementById('cameraControls');
     const resultContent = document.getElementById('resultContent');
-    const historyList = document.getElementById('historyList');
-    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
-    const referenceGrid = document.getElementById('referenceGrid');
-    const clearRefsBtn = document.getElementById('clearRefsBtn');
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMsg');
-    const historyCountEl = document.getElementById('historyCount');
     const refCountEl = document.getElementById('refCount');
     const geminiApiKeyInput = document.getElementById('geminiApiKey');
     const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
     const analysisMethod = document.getElementById('analysisMethod');
+    const langSelect = document.getElementById('langSelect');
 
     let cameraStream = null;
     let isCameraActive = false;
 
-    // Load saved API key
     if (geminiApiKey) {
       geminiApiKeyInput.value = geminiApiKey;
     }
 
-    // Save API key
+    // ---------- LANGUAGE SWITCH ----------
+    langSelect.value = currentLang;
+    langSelect.addEventListener('change', function() {
+      currentLang = this.value;
+      localStorage.setItem('agriscan_lang', currentLang);
+      applyStaticTranslations();
+      showToast(t('tagline'));
+    });
+
     saveApiKeyBtn.addEventListener('click', function() {
       const key = geminiApiKeyInput.value.trim();
       if (key) {
         localStorage.setItem('gemini_api_key', key);
         geminiApiKey = key;
-        showToast('✅ Gemini API key saved');
+        showToast(t('toastApiKeySaved'));
       } else {
-        showToast('⚠️ Please enter a valid API key', true);
+        showToast(t('toastApiKeyInvalid'), true);
       }
     });
 
-    // Also save on Enter key
     geminiApiKeyInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         saveApiKeyBtn.click();
@@ -717,9 +1144,9 @@
     // ---------- CAMERA ----------
     async function startCamera() {
       try {
-        if (isCameraActive) { showToast('📷 Camera active'); return; }
+        if (isCameraActive) { showToast(t('toastCameraActive')); return; }
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          showToast('❌ Camera not supported', true);
+          showToast(t('toastCameraNotSupported'), true);
           return;
         }
         cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -732,9 +1159,9 @@
         uploadZone.style.display = 'none';
         previewContainer.style.display = 'none';
         isCameraActive = true;
-        showToast('📷 Camera ready. Capture a leaf.');
+        showToast(t('toastCameraReady'));
       } catch (err) {
-        showToast('❌ Camera error: ' + err.message, true);
+        showToast(t('toastCameraError', { msg: err.message }), true);
       }
     }
 
@@ -750,7 +1177,7 @@
 
     function capturePhoto() {
       if (!isCameraActive || !cameraStream) {
-        showToast('❌ Start camera first', true);
+        showToast(t('toastStartCameraFirst'), true);
         return;
       }
       const canvas = document.createElement('canvas');
@@ -765,8 +1192,8 @@
       img.onload = function() { currentImageElement = img; };
       img.src = currentImageData;
       stopCamera();
-      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Photo captured. Click Analyze with Gemini or Local AI.</p>`;
-      showToast('📸 Photo captured');
+      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> ${t('photoCapturedClickAnalyze')}</p>`;
+      showToast(t('toastPhotoCaptured'));
     }
 
     cameraBtn.addEventListener('click', startCamera);
@@ -786,7 +1213,7 @@
       if (isCameraActive) stopCamera();
       if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); }
     });
-    fileInput.addEventListener('change', function() { 
+    fileInput.addEventListener('change', function() {
       if (this.files.length) {
         if (isCameraActive) stopCamera();
         handleFile(this.files[0]);
@@ -794,7 +1221,7 @@
     });
 
     function handleFile(file) {
-      if (!file.type.startsWith('image/')) { showToast('⚠️ Please upload an image', true); return; }
+      if (!file.type.startsWith('image/')) { showToast(t('toastUploadImageOnly'), true); return; }
       const reader = new FileReader();
       reader.onload = function(e) {
         currentImageData = e.target.result;
@@ -804,8 +1231,8 @@
         const img = new Image();
         img.onload = function() { currentImageElement = img; };
         img.src = currentImageData;
-        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Image loaded. Click Analyze with Gemini or Local AI.</p>`;
-        showToast('📸 Image loaded');
+        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> ${t('imageLoadedClickAnalyze')}</p>`;
+        showToast(t('toastImageLoaded'));
       };
       reader.readAsDataURL(file);
     }
@@ -821,26 +1248,26 @@
       uploadZone.style.display = 'block';
       cameraVideo.style.display = 'none';
       cameraControls.style.display = 'none';
-      resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>`;
+      resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${t('promptUpload')}</p>`;
       analysisMethod.textContent = '';
-      showToast('Cleared');
+      showToast(t('toastCleared'));
     });
 
     // ---------- ANALYZE WITH GEMINI ----------
     analyzeGeminiBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload or capture an image first', true);
+        showToast(t('toastUploadFirst'), true);
         return;
       }
 
       if (!geminiApiKey) {
-        showToast('⚠️ Please enter your Gemini API key first', true);
+        showToast(t('toastEnterApiKeyFirst'), true);
         geminiApiKeyInput.focus();
         return;
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">🧠 Analyzing with Gemini AI...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">${t('resultAnalyzingGemini')}</span>
       </div>`;
       analyzeGeminiBtn.disabled = true;
 
@@ -849,17 +1276,14 @@
         let usedLocalFallback = false;
 
         if (!result) {
-          // Gemini is down/overloaded/misconfigured — fall back to the local
-          // analyzer automatically instead of leaving the user stuck.
-          showToast('⚠️ Gemini unavailable, using Local AI instead');
+          showToast(t('toastGeminiUnavailable'));
           result = await identifyLeafLocal(currentImageElement);
           usedLocalFallback = true;
         }
 
         lastResult = result;
-        analysisMethod.textContent = usedLocalFallback ? `🔬 ${result.method} (Gemini unavailable)` : '🔬 Gemini AI';
+        analysisMethod.textContent = usedLocalFallback ? `🔬 ${result.method} ${t('methodGeminiUnavailableSuffix')}` : t('methodGeminiAI');
 
-        // Save to Supabase
         if (supabase && isConnected) {
           try {
             await supabase.from('scans').insert([{
@@ -871,34 +1295,35 @@
               image_data: currentImageData,
               method: usedLocalFallback ? result.method : 'Gemini AI'
             }]);
-            loadHistory();
           } catch (e) {}
         }
 
-        // Display result
         const diseaseColor = result.disease && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
+        const diseaseLabel = result.disease && result.disease.toLowerCase() === 'healthy' ? t('healthyLabel') : (result.disease || t('healthyLabel'));
         const sourceBadge = usedLocalFallback
-          ? `<i class="fas fa-microscope"></i> ${result.method} (Gemini busy)`
+          ? `<i class="fas fa-microscope"></i> ${result.method} ${t('sourceBadgeGeminiBusy')}`
           : `<i class="fab fa-google"></i> Gemini AI`;
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
-              <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
+              <span class="disease-tag" style="background:${diseaseColor};color:white;">${diseaseLabel}</span>
               <span style="font-size:11px;color:var(--ink-faint);">${sourceBadge}</span>
             </div>
-            <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
-            ${result.symptoms ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-stethoscope"></i> Symptoms: ${result.symptoms}</div>` : ''}
-            ${usedLocalFallback && result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leaf_type}</div>` : ''}
+            <div class="confidence"><i class="fas fa-chart-line"></i> ${t('resultConfidence')}: <span>${result.confidence}%</span></div>
+            ${result.symptoms ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-stethoscope"></i> ${t('resultSymptoms')}: ${result.symptoms}</div>` : ''}
+            ${usedLocalFallback && result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> ${t('resultLeafType')}: ${result.leaf_type}</div>` : ''}
             ${result.recommendation ? `<div style="font-size:13px;color:var(--ink-soft);background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);margin-top:6px;">
-              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> Recommendation: ${result.recommendation}
+              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> ${t('resultRecommendation')}: ${result.recommendation}
             </div>` : ''}
           </div>
         `;
-        showToast(`✅ Identified: ${result.name}${result.disease && result.disease.toLowerCase() !== 'healthy' ? ` - ${result.disease}` : ''}`);
+        showToast(result.disease && result.disease.toLowerCase() !== 'healthy'
+          ? t('toastIdentifiedWithDisease', { name: result.name, disease: result.disease })
+          : t('toastIdentified', { name: result.name }));
       } catch (err) {
-        showToast('❌ Error: ' + err.message, true);
-        resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> Error: ${err.message}</p>`;
+        showToast(t('toastError', { msg: err.message }), true);
+        resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> ${t('errorPrefix')}: ${err.message}</p>`;
       } finally {
         analyzeGeminiBtn.disabled = false;
       }
@@ -907,21 +1332,20 @@
     // ---------- ANALYZE LOCAL ----------
     analyzeBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload or capture an image first', true);
+        showToast(t('toastUploadFirst'), true);
         return;
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf locally...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">${t('resultAnalyzingLocal')}</span>
       </div>`;
       analyzeBtn.disabled = true;
 
       try {
         const result = await identifyLeafLocal(currentImageElement);
         lastResult = result;
-        analysisMethod.textContent = '🔬 Local AI';
+        analysisMethod.textContent = t('methodLocalAI');
 
-        // Save to Supabase
         if (supabase && isConnected) {
           try {
             await supabase.from('scans').insert([{
@@ -933,176 +1357,35 @@
               image_data: currentImageData,
               method: result.method
             }]);
-            loadHistory();
           } catch (e) {}
         }
 
         const diseaseColor = result.disease && result.disease.toLowerCase() !== 'pending' && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
+        const diseaseLabel = (!result.disease || result.disease.toLowerCase() === 'pending' || result.disease.toLowerCase() === 'healthy') ? t('healthyLabel') : result.disease;
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
-              <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
+              <span class="disease-tag" style="background:${diseaseColor};color:white;">${diseaseLabel}</span>
               <span style="font-size:11px;color:var(--ink-faint);">${result.method}</span>
             </div>
-            <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
-            ${result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leaf_type}</div>` : ''}
-            ${result.matchCount ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-database"></i> Based on ${result.matchCount} reference images</div>` : ''}
+            <div class="confidence"><i class="fas fa-chart-line"></i> ${t('resultConfidence')}: <span>${result.confidence}%</span></div>
+            ${result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> ${t('resultLeafType')}: ${result.leaf_type}</div>` : ''}
+            ${result.matchCount ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-database"></i> ${t('resultBasedOnRefs', { n: result.matchCount })}</div>` : ''}
             ${result.recommendation ? `<div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);">
               <i class="fas fa-lightbulb" style="color:var(--gold);"></i> ${result.recommendation}
             </div>` : ''}
           </div>
         `;
-        showToast(`✅ Identified: ${result.name}`);
+        showToast(t('toastIdentified', { name: result.name }));
       } catch (err) {
-        showToast('❌ Error: ' + err.message, true);
+        showToast(t('toastError', { msg: err.message }), true);
       } finally {
         analyzeBtn.disabled = false;
       }
     });
 
-    // ---------- SAVE REFERENCE ----------
-    saveRefBtn.addEventListener('click', async function() {
-      if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload or capture an image first', true);
-        return;
-      }
-      if (!lastResult) {
-        showToast('⚠️ Please analyze the image first', true);
-        return;
-      }
-
-      const existing = leafReferences.find(r => r.name === lastResult.name);
-      if (existing) {
-        existing.imageData = currentImageData;
-        existing.timestamp = Date.now();
-        existing.count = (existing.count || 1) + 1;
-        showToast(`✅ Updated ${lastResult.name} reference (${existing.count} images)`);
-      } else {
-        leafReferences.push({
-          id: Date.now(),
-          name: lastResult.name,
-          imageData: currentImageData,
-          timestamp: Date.now(),
-          count: 1
-        });
-        showToast(`✅ Added ${lastResult.name} to database`);
-      }
-
-      if (supabase && isConnected) {
-        try {
-          await supabase.from('leaf_references').upsert([{
-            name: lastResult.name,
-            image_data: currentImageData,
-            timestamp: Date.now(),
-            count: existing ? (existing.count || 1) + 1 : 1
-          }]);
-        } catch (e) {}
-      }
-
-      renderReferences();
-    });
-
-    // ---------- RENDER REFERENCES ----------
-    function renderReferences() {
-      if (leafReferences.length === 0) {
-        referenceGrid.innerHTML = `
-          <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
-            <i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-            <p>No leaf references yet. Upload a leaf and click "Add to DB"</p>
-          </div>
-        `;
-        refCountEl.textContent = '0';
-        return;
-      }
-
-      let html = '';
-      const uniqueNames = [...new Set(leafReferences.map(r => r.name))];
-      uniqueNames.forEach(name => {
-        const refs = leafReferences.filter(r => r.name === name);
-        const latest = refs[refs.length - 1];
-        html += `
-          <div class="reference-item">
-            <img src="${latest.imageData}" alt="${name}" onerror="this.style.display='none'">
-            <div class="name">${name}</div>
-            <div class="count">${refs.length} image${refs.length > 1 ? 's' : ''}</div>
-          </div>
-        `;
-      });
-      referenceGrid.innerHTML = html;
-      refCountEl.textContent = leafReferences.length;
-    }
-
-    // ---------- CLEAR REFERENCES ----------
-    clearRefsBtn.addEventListener('click', function() {
-      if (!confirm('Delete ALL leaf references?')) return;
-      leafReferences = [];
-      renderReferences();
-      if (supabase && isConnected) {
-        supabase.from('leaf_references').delete().neq('id', 0).catch(() => {});
-      }
-      showToast('🗑️ References cleared');
-    });
-
-    // ---------- HISTORY ----------
-    async function loadHistory() {
-      if (!supabase || !isConnected) return;
-      try {
-        const { data, error } = await supabase.from('scans').select('*').order('timestamp', { ascending: false }).limit(20);
-        if (error) throw error;
-        historyList.innerHTML = '';
-        if (!data || data.length === 0) {
-          historyList.innerHTML = `<div style="text-align:center;padding:20px;color:var(--ink-faint);"><p>No scans yet</p></div>`;
-        } else {
-          data.forEach(scan => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            const date = new Date(scan.timestamp);
-            const timeStr = date.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
-            const method = scan.method || 'Unknown';
-            item.innerHTML = `
-              <span class="h-plant"><i class="fas fa-seedling"></i> ${scan.plant || 'Unknown'}</span>
-              <span class="h-disease" style="background:${scan.disease && scan.disease.toLowerCase() === 'healthy' ? '#d4edda' : '#f8d7da'};color:${scan.disease && scan.disease.toLowerCase() === 'healthy' ? '#155724' : '#721c24'};">${scan.disease || 'Pending'}</span>
-              <span style="font-size:11px;color:var(--ink-faint);">${method}</span>
-              <span class="h-date"><i class="far fa-clock"></i> ${timeStr}</span>
-            `;
-            historyList.appendChild(item);
-          });
-        }
-        historyCountEl.textContent = `(${data ? data.length : 0})`;
-      } catch (err) {
-        console.error('History error:', err);
-      }
-    }
-
-    refreshHistoryBtn.addEventListener('click', loadHistory);
-
-    // ---------- INIT SUPABASE ----------
-    function initSupabase() {
-      try {
-        if (typeof window.supabase === 'undefined') {
-          setConnectionStatus('offline', 'SDK error');
-          return;
-        }
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: { persistSession: false, autoRefreshToken: false }
-        });
-        supabase.from('scans').select('id', { count: 'exact', head: true })
-          .then(({ error }) => {
-            if (error) { 
-              setConnectionStatus('offline', 'Error');
-              showToast('❌ DB error: ' + error.message, true);
-              return;
-            }
-            isConnected = true;
-            setConnectionStatus('online', 'Connected');
-            loadHistory();
-            loadReferences();
-          })
-          .catch(() => { setConnectionStatus('offline', 'Error'); });
-      } catch (e) { setConnectionStatus('offline', 'Error'); }
-    }
-
+    // ---------- LOAD REFERENCES ----------
     async function loadReferences() {
       if (!supabase || !isConnected) return;
       try {
@@ -1115,28 +1398,50 @@
             timestamp: r.timestamp,
             count: r.count || 1
           }));
-          renderReferences();
+          refCountEl.textContent = leafReferences.length;
         }
       } catch (e) {}
     }
 
-    // ---------- RETRY MODEL ----------
+    // ---------- INIT SUPABASE ----------
+    function initSupabase() {
+      try {
+        if (typeof window.supabase === 'undefined') {
+          setConnectionStatus('offline', t('connSdkError'));
+          return;
+        }
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false }
+        });
+        supabase.from('scans').select('id', { count: 'exact', head: true })
+          .then(({ error }) => {
+            if (error) {
+              setConnectionStatus('offline', t('connOffline'));
+              showToast(t('toastDbError', { msg: error.message }), true);
+              return;
+            }
+            isConnected = true;
+            setConnectionStatus('online', t('connConnected'));
+            loadReferences();
+          })
+          .catch(() => { setConnectionStatus('offline', t('connOffline')); });
+      } catch (e) { setConnectionStatus('offline', t('connOffline')); }
+    }
+
     retryModelBtn.addEventListener('click', async function() {
       this.disabled = true;
       const success = await loadMobileNet();
       this.disabled = false;
-      showToast(success ? '✅ AI model reloaded' : '⚠️ AI fallback mode', !success);
+      showToast(success ? t('toastAiReloaded') : t('toastAiFallbackMode'), !success);
     });
 
     // ---------- INIT ----------
+    applyStaticTranslations();
     initSupabase();
     setTimeout(loadMobileNet, 1000);
 
-    console.log('🌱 AgriScan Zambia with Crop Leaf Database & Gemini AI');
-    console.log('📸 Upload a leaf image to identify the crop');
-    console.log('🤖 Use "Analyze with Gemini" for AI-powered disease detection');
-    console.log('💾 Click "Add to DB" to save as reference');
-    console.log('🔑 Get your Gemini API key at: https://ai.google.dev/gemini-api');
+    console.log('🌱 AgriScan · Smart Leaf Diagnosis');
+    console.log('📸 Upload a leaf image to identify your crop');
   })();
 </script>
 </body>
