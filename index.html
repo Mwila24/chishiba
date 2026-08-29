@@ -425,36 +425,68 @@
           }
         };
 
+        // Fetch with a hard timeout so a stuck request can't hang the UI forever.
+        function fetchWithTimeout(url, options, ms) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), ms);
+          return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+        }
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // Status codes worth retrying: 404 (wrong/retired model name -> try next model),
+        // 429 (rate limited) and 503 (temporarily overloaded) -> both worth a short
+        // backoff-and-retry before giving up on that model.
         let response = null;
         let lastError = null;
 
-        // Try each candidate model in order. A 404 means "model retired/not found for
-        // this key" -> move to the next one instead of failing the whole request.
+        outer:
         for (const model of GEMINI_MODEL_CANDIDATES) {
           const url = `${GEMINI_API_BASE}${model}:generateContent?key=${geminiApiKey}`;
-          try {
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(requestBody)
-            });
+          const maxAttemptsForModel = 2; // one retry per model on overload/rate-limit
 
-            if (res.ok) {
-              response = res;
-              break;
-            }
+          for (let attempt = 1; attempt <= maxAttemptsForModel; attempt++) {
+            try {
+              const res = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+              }, 20000);
 
-            const errorText = await res.text();
-            lastError = new Error(`${model} → ${res.status}: ${errorText}`);
-            if (res.status !== 404) {
-              // Non-404 errors (bad key, quota, safety block, etc.) won't be fixed by
-              // trying another model name, so stop retrying and surface it.
+              if (res.ok) {
+                response = res;
+                break outer;
+              }
+
+              const errorText = await res.text();
+              lastError = new Error(`${model} → ${res.status}: ${errorText}`);
+
+              if (res.status === 404) {
+                // Model doesn't exist for this key -> no point retrying, go to next model
+                break;
+              }
+              if (res.status === 429 || res.status === 503) {
+                if (attempt < maxAttemptsForModel) {
+                  showToast(`⏳ ${model} is busy, retrying...`);
+                  await sleep(1500);
+                  continue; // retry same model once
+                }
+                break; // exhausted retries for this model, try the next one
+              }
+              // Any other error (bad key, safety block, etc.) won't be fixed by
+              // retrying or switching models — surface it immediately.
               throw lastError;
+            } catch (innerErr) {
+              if (innerErr.name === 'AbortError') {
+                lastError = new Error(`${model} timed out after 20s`);
+                break; // try next model
+              }
+              if (innerErr === lastError || /404|429|503/.test(String(innerErr.message))) {
+                lastError = innerErr;
+                break;
+              }
+              throw innerErr;
             }
-            // 404 -> fall through and try the next candidate model
-          } catch (innerErr) {
-            lastError = innerErr;
-            if (!String(innerErr.message).includes('404')) throw innerErr;
           }
         }
 
@@ -813,14 +845,19 @@
       analyzeGeminiBtn.disabled = true;
 
       try {
-        const result = await analyzeWithGemini(currentImageData);
+        let result = await analyzeWithGemini(currentImageData);
+        let usedLocalFallback = false;
+
         if (!result) {
-          resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> Gemini analysis failed. Try the Local AI button.</p>`;
-          return;
+          // Gemini is down/overloaded/misconfigured — fall back to the local
+          // analyzer automatically instead of leaving the user stuck.
+          showToast('⚠️ Gemini unavailable, using Local AI instead');
+          result = await identifyLeafLocal(currentImageElement);
+          usedLocalFallback = true;
         }
 
         lastResult = result;
-        analysisMethod.textContent = '🔬 Gemini AI';
+        analysisMethod.textContent = usedLocalFallback ? `🔬 ${result.method} (Gemini unavailable)` : '🔬 Gemini AI';
 
         // Save to Supabase
         if (supabase && isConnected) {
@@ -832,7 +869,7 @@
               recommendation: result.recommendation || '',
               timestamp: Date.now(),
               image_data: currentImageData,
-              method: 'Gemini AI'
+              method: usedLocalFallback ? result.method : 'Gemini AI'
             }]);
             loadHistory();
           } catch (e) {}
@@ -840,21 +877,25 @@
 
         // Display result
         const diseaseColor = result.disease && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
+        const sourceBadge = usedLocalFallback
+          ? `<i class="fas fa-microscope"></i> ${result.method} (Gemini busy)`
+          : `<i class="fab fa-google"></i> Gemini AI`;
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
               <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
-              <span style="font-size:11px;color:var(--ink-faint);"><i class="fab fa-google"></i> Gemini AI</span>
+              <span style="font-size:11px;color:var(--ink-faint);">${sourceBadge}</span>
             </div>
             <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
             ${result.symptoms ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-stethoscope"></i> Symptoms: ${result.symptoms}</div>` : ''}
+            ${usedLocalFallback && result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leaf_type}</div>` : ''}
             ${result.recommendation ? `<div style="font-size:13px;color:var(--ink-soft);background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);margin-top:6px;">
               <i class="fas fa-lightbulb" style="color:var(--gold);"></i> Recommendation: ${result.recommendation}
             </div>` : ''}
           </div>
         `;
-        showToast(`✅ Gemini identified: ${result.name}${result.disease && result.disease.toLowerCase() !== 'healthy' ? ` - ${result.disease}` : ''}`);
+        showToast(`✅ Identified: ${result.name}${result.disease && result.disease.toLowerCase() !== 'healthy' ? ` - ${result.disease}` : ''}`);
       } catch (err) {
         showToast('❌ Error: ' + err.message, true);
         resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> Error: ${err.message}</p>`;
