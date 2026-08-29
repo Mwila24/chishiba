@@ -399,7 +399,7 @@
   <div class="brand">
     <div class="icon-leaf"><i class="fas fa-leaf"></i></div>
     <div>
-      <h1>AgriVision</h1>
+      <h1>AgriScan</h1>
       <div class="tagline"><i class="fas fa-microscope"></i> <span data-i18n="tagline">Smart Leaf Diagnosis</span></div>
     </div>
   </div>
@@ -489,7 +489,7 @@
 
   <!-- Footer -->
   <div class="footer">
-    <i class="fas fa-leaf"></i> <span data-i18n="footerText">AgriVision · AI Crop Diagnosis · Powered by Gemini</span>
+    <i class="fas fa-leaf"></i> <span data-i18n="footerText">AgriScan · AI Crop Diagnosis · Powered by Gemini</span>
   </div>
 </div>
 
@@ -703,19 +703,41 @@
     const GEMINI_MODEL_CANDIDATES = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-2.5-flash'];
 
     // ---------- CROP LEAF DATABASE ----------
+    // localNames: best-effort vernacular crop names. A language left out for a
+    // crop simply falls back to the English name rather than guess wrongly.
     const CROP_DATABASE = [
-      { name: "Maize", aliases: ["corn", "mealie"], leaf_type: "long, broad, parallel veins", diseases: ["Gray Leaf Spot", "Northern Leaf Blight", "Maize Lethal Necrosis"] },
-      { name: "Cassava", aliases: ["manioc", "yuca"], leaf_type: "palmate, finger-like lobes", diseases: ["Cassava Mosaic Disease", "Brown Streak", "Cassava Bacterial Blight"] },
-      { name: "Groundnuts", aliases: ["peanuts", "goobers"], leaf_type: "small, oval, paired leaflets", diseases: ["Early Leaf Spot", "Late Leaf Spot", "Groundnut Rosette"] },
-      { name: "Soybeans", aliases: ["soya"], leaf_type: "trifoliate, oval leaflets", diseases: ["Soybean Rust", "Asian Soybean Rust"] },
-      { name: "Cotton", aliases: ["lint"], leaf_type: "palmate, 3-5 lobes", diseases: ["Cotton Leaf Curl", "Bacterial Blight"] },
-      { name: "Sorghum", aliases: ["milo", "durra"], leaf_type: "long, narrow, pointed", diseases: ["Sorghum Anthracnose", "Downy Mildew"] },
-      { name: "Sweet Potato", aliases: ["yam"], leaf_type: "heart-shaped or lobed", diseases: ["Sweet Potato Virus", "Fusarium Wilt"] },
-      { name: "Pumpkin", aliases: ["squash", "calabash"], leaf_type: "large, round, lobed", diseases: ["Powdery Mildew", "Downy Mildew"] },
-      { name: "Sunflower", aliases: ["helianthus"], leaf_type: "broad, heart-shaped, rough", diseases: ["Sunflower Rust", "Downy Mildew"] },
-      { name: "Cowpea", aliases: ["black-eyed pea"], leaf_type: "trifoliate, oval leaflets", diseases: ["Cowpea Mosaic Virus", "Cercospora Leaf Spot"] },
-      { name: "Millet", aliases: ["finger millet", "rapoko"], leaf_type: "long, narrow, pointed", diseases: ["Blast", "Downy Mildew"] },
+      { name: "Maize", aliases: ["corn", "mealie"], leaf_type: "long, broad, parallel veins", diseases: ["Gray Leaf Spot", "Northern Leaf Blight", "Maize Lethal Necrosis"],
+        localNames: { bem: "Amataba", nya: "Chimanga", toi: "Mapopwe" } },
+      { name: "Cassava", aliases: ["manioc", "yuca"], leaf_type: "palmate, finger-like lobes", diseases: ["Cassava Mosaic Disease", "Brown Streak", "Cassava Bacterial Blight"],
+        localNames: { bem: "Kalundwe", nya: "Chinangwa", toi: "Kalundwe" } },
+      { name: "Groundnuts", aliases: ["peanuts", "goobers"], leaf_type: "small, oval, paired leaflets", diseases: ["Early Leaf Spot", "Late Leaf Spot", "Groundnut Rosette"],
+        localNames: { bem: "Imbalala", nya: "Mtedza" } },
+      { name: "Soybeans", aliases: ["soya"], leaf_type: "trifoliate, oval leaflets", diseases: ["Soybean Rust", "Asian Soybean Rust"],
+        localNames: { bem: "Soya", nya: "Soya", toi: "Soya", loz: "Soya" } },
+      { name: "Cotton", aliases: ["lint"], leaf_type: "palmate, 3-5 lobes", diseases: ["Cotton Leaf Curl", "Bacterial Blight"],
+        localNames: {} },
+      { name: "Sorghum", aliases: ["milo", "durra"], leaf_type: "long, narrow, pointed", diseases: ["Sorghum Anthracnose", "Downy Mildew"],
+        localNames: { bem: "Amasaka", nya: "Mapira", loz: "Mabele" } },
+      { name: "Sweet Potato", aliases: ["yam"], leaf_type: "heart-shaped or lobed", diseases: ["Sweet Potato Virus", "Fusarium Wilt"],
+        localNames: { bem: "Ifyumbu", nya: "Mbatata" } },
+      { name: "Pumpkin", aliases: ["squash", "calabash"], leaf_type: "large, round, lobed", diseases: ["Powdery Mildew", "Downy Mildew"],
+        localNames: { bem: "Maungu", nya: "Maungu", toi: "Maungu" } },
+      { name: "Sunflower", aliases: ["helianthus"], leaf_type: "broad, heart-shaped, rough", diseases: ["Sunflower Rust", "Downy Mildew"],
+        localNames: { bem: "Intambakasuba", nya: "Mpendadzuwa" } },
+      { name: "Cowpea", aliases: ["black-eyed pea"], leaf_type: "trifoliate, oval leaflets", diseases: ["Cowpea Mosaic Virus", "Cercospora Leaf Spot"],
+        localNames: {} },
+      { name: "Millet", aliases: ["finger millet", "rapoko"], leaf_type: "long, narrow, pointed", diseases: ["Blast", "Downy Mildew"],
+        localNames: { bem: "Amale" } },
     ];
+
+    // Returns the vernacular crop name for the current language, or the
+    // English name if no translation is recorded for that crop/language.
+    function getCropLocalName(englishName) {
+      if (currentLang === 'en') return englishName;
+      const crop = CROP_DATABASE.find(c => c.name.toLowerCase() === String(englishName).toLowerCase());
+      if (crop && crop.localNames && crop.localNames[currentLang]) return crop.localNames[currentLang];
+      return englishName;
+    }
 
     // ---------- LEAF REFERENCE STORAGE ----------
     let leafReferences = [];
@@ -935,8 +957,10 @@
 
         const parsed = JSON.parse(jsonMatch[0]);
 
+        const geminiPlantName = parsed.plant || 'Unknown';
         return {
-          name: parsed.plant || 'Unknown',
+          name: geminiPlantName,
+          localName: getCropLocalName(geminiPlantName),
           disease: parsed.disease || 'Pending',
           confidence: Math.min(100, Math.max(0, parseInt(parsed.confidence) || 70)),
           recommendation: parsed.recommendation || 'No recommendation available',
@@ -963,6 +987,7 @@
                   crop.aliases.some(a => topClass.includes(a))) {
                 return {
                   name: crop.name,
+                  localName: getCropLocalName(crop.name),
                   confidence: Math.round(predictions[0].probability * 100),
                   method: 'AI Classification',
                   leaf_type: crop.leaf_type,
@@ -1002,6 +1027,7 @@
         if (bestMatch && bestSimilarity > 0.3) {
           return {
             name: bestMatch.name,
+            localName: getCropLocalName(bestMatch.name),
             confidence: Math.round(bestSimilarity * 100),
             method: 'Database Match',
             leaf_type: 'Matched from database',
@@ -1061,6 +1087,7 @@
 
       return {
         name: bestCrop.name,
+        localName: getCropLocalName(bestCrop.name),
         confidence: Math.round(Math.min(95, 60 + bestScore * 40)),
         method: 'Leaf Analysis',
         leaf_type: bestCrop.leaf_type,
@@ -1303,10 +1330,13 @@
         const sourceBadge = usedLocalFallback
           ? `<i class="fas fa-microscope"></i> ${result.method} ${t('sourceBadgeGeminiBusy')}`
           : `<i class="fab fa-google"></i> Gemini AI`;
+        const plantDisplay = (result.localName && result.localName !== result.name)
+          ? `${result.localName} <span style="font-size:13px;font-weight:500;color:var(--ink-faint);">(${result.name})</span>`
+          : result.name;
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
+              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${plantDisplay}</span>
               <span class="disease-tag" style="background:${diseaseColor};color:white;">${diseaseLabel}</span>
               <span style="font-size:11px;color:var(--ink-faint);">${sourceBadge}</span>
             </div>
@@ -1319,8 +1349,8 @@
           </div>
         `;
         showToast(result.disease && result.disease.toLowerCase() !== 'healthy'
-          ? t('toastIdentifiedWithDisease', { name: result.name, disease: result.disease })
-          : t('toastIdentified', { name: result.name }));
+          ? t('toastIdentifiedWithDisease', { name: result.localName || result.name, disease: result.disease })
+          : t('toastIdentified', { name: result.localName || result.name }));
       } catch (err) {
         showToast(t('toastError', { msg: err.message }), true);
         resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> ${t('errorPrefix')}: ${err.message}</p>`;
@@ -1362,10 +1392,13 @@
 
         const diseaseColor = result.disease && result.disease.toLowerCase() !== 'pending' && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
         const diseaseLabel = (!result.disease || result.disease.toLowerCase() === 'pending' || result.disease.toLowerCase() === 'healthy') ? t('healthyLabel') : result.disease;
+        const plantDisplay = (result.localName && result.localName !== result.name)
+          ? `${result.localName} <span style="font-size:13px;font-weight:500;color:var(--ink-faint);">(${result.name})</span>`
+          : result.name;
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
+              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${plantDisplay}</span>
               <span class="disease-tag" style="background:${diseaseColor};color:white;">${diseaseLabel}</span>
               <span style="font-size:11px;color:var(--ink-faint);">${result.method}</span>
             </div>
@@ -1377,7 +1410,7 @@
             </div>` : ''}
           </div>
         `;
-        showToast(t('toastIdentified', { name: result.name }));
+        showToast(t('toastIdentified', { name: result.localName || result.name }));
       } catch (err) {
         showToast(t('toastError', { msg: err.message }), true);
       } finally {
