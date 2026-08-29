@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>AgriScan · Smart Leaf Diagnosis</title>
-  <meta name="theme-color" content="#0f2818">
+  <title>AgriScan Zambia · Crop Leaf Database</title>
+  <meta name="theme-color" content="#1e3c2c">
   <!-- TensorFlow.js + MobileNet (fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
@@ -13,611 +13,257 @@
   <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,600&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --primary: #0f2818;
-      --primary-light: #1a4a2a;
-      --accent: #4CAF50;
-      --accent-gold: #c9a84c;
-      --surface: #ffffff;
-      --bg: #f5f7f4;
-      --text: #1a1f1a;
-      --text-soft: #4a5a4a;
-      --text-faint: #8a9a8a;
-      --border: #e2e8e0;
-      --shadow: 0 8px 30px rgba(0,20,10,0.08);
-      --radius: 20px;
-      --radius-sm: 12px;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --primary: #1e3c2c; --primary-light: #2b5a3e; --gold: #d4a72c;
+      --gold-tint: #f8f0d5; --surface: #ffffff; --paper: #f4f7f2;
+      --ink: #15201a; --ink-soft: #3b4d3e; --ink-faint: #7c8a7a;
+      --border: #dce3d6; --shadow: 0 12px 32px rgba(0,20,10,0.10);
+      --radius: 24px; --font-display: 'Fraunces', serif; --font-body: 'Inter', sans-serif;
     }
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-    
-    /* TOP BAR - Clean & Minimal */
+    body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
+    .bg-pattern { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 20% 30%, #eaf3e5 0%, #d6e4d0 70%, #c2d4ba 100%); opacity: 0.5; }
+    .bg-pattern::after { content: "🇿🇲🍃🌿"; font-size: 120px; position: absolute; right: -20px; bottom: -20px; opacity: 0.06; letter-spacing: 20px; white-space: nowrap; pointer-events: none; }
     .topbar {
-      background: var(--primary);
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px 16px;
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      border-bottom: 2px solid rgba(76, 175, 80, 0.3);
+      background: linear-gradient(135deg, #1e3c2c, #2b5a3e); border-bottom: 3px solid var(--gold);
+      padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px;
+      box-shadow: var(--shadow); position: sticky; top: 0; z-index: 30;
     }
-    .topbar .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .topbar .brand { display: flex; align-items: center; gap: 12px; }
+    .topbar .brand .icon-leaf { font-size: 32px; color: var(--gold); background: rgba(255,255,255,0.08); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); }
+    .topbar .brand h1 { font-family: var(--font-display); font-weight: 600; font-size: 22px; color: #fff; letter-spacing: -0.3px; }
+    .topbar .brand .tagline { font-size: 11px; color: var(--gold); letter-spacing: 0.8px; text-transform: uppercase; font-weight: 500; }
+    .topbar .status-badge { background: rgba(255,255,255,0.08); padding: 6px 16px; border-radius: 60px; color: #d4e8d0; font-size: 12px; font-weight: 500; border: 1px solid rgba(212,167,44,0.3); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+    .card {
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(4px); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px 22px; margin-bottom: 20px; box-shadow: var(--shadow);
+      border-top: 4px solid var(--gold); transition: 0.2s ease;
     }
-    .topbar .brand .icon {
-      width: 40px;
-      height: 40px;
-      background: rgba(76, 175, 80, 0.2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      color: var(--accent);
-      border: 2px solid rgba(76, 175, 80, 0.3);
-    }
-    .topbar .brand h1 {
-      font-size: 20px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: -0.3px;
-    }
-    .topbar .brand .sub {
-      font-size: 11px;
-      color: rgba(255,255,255,0.5);
-      font-weight: 400;
-      letter-spacing: 0.5px;
-    }
-    .topbar .status {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .topbar .status .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      background: #4CAF50;
-      animation: pulse-dot 2s infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    .topbar .status .label {
-      font-size: 12px;
-      color: rgba(255,255,255,0.6);
-      font-weight: 400;
-    }
-    .topbar .status .badge {
-      background: rgba(76, 175, 80, 0.2);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 10px;
-      color: var(--accent);
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      border: 1px solid rgba(76, 175, 80, 0.2);
-    }
-
-    .shell {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 24px 20px 40px;
-    }
-
-    /* Main Card */
-    .card-main {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 32px 28px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      margin-bottom: 16px;
-    }
-
-    .card-main .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .card-main .header h2 {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .card-main .header h2 i {
-      color: var(--accent);
-      font-size: 20px;
-    }
-    .card-main .header .tag {
-      font-size: 11px;
-      background: #e8f5e9;
-      color: var(--accent);
-      padding: 4px 14px;
-      border-radius: 20px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-
-    /* Upload Zone */
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+    .card-header h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .card-header h2 i { color: var(--gold); }
+    .badge-ai { background: var(--primary); color: #fff; padding: 4px 14px; border-radius: 40px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
     .upload-zone {
-      border: 2px dashed var(--border);
-      border-radius: var(--radius-sm);
-      padding: 40px 20px;
-      text-align: center;
-      background: var(--bg);
-      transition: 0.2s;
-      cursor: pointer;
-      position: relative;
+      border: 2px dashed var(--border); border-radius: 20px; padding: 30px 20px; text-align: center;
+      background: var(--paper); transition: 0.2s; cursor: pointer;
     }
-    .upload-zone:hover {
-      border-color: var(--accent);
-      background: #f0f7ef;
-    }
-    .upload-zone.dragover {
-      border-color: var(--accent);
-      background: #e8f5e9;
-    }
-    .upload-zone .icon-big {
-      font-size: 48px;
-      color: var(--accent);
-      opacity: 0.6;
-      margin-bottom: 12px;
-      display: block;
-    }
-    .upload-zone h3 {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-    .upload-zone p {
-      font-size: 14px;
-      color: var(--text-faint);
-    }
-    .upload-zone .or {
-      font-size: 12px;
-      color: var(--text-faint);
-      margin: 8px 0;
-    }
+    .upload-zone:hover { border-color: var(--gold); background: var(--gold-tint); }
+    .upload-zone.dragover { border-color: var(--primary); background: #e3f0e0; }
+    .upload-zone i { font-size: 48px; color: var(--primary-light); margin-bottom: 10px; }
+    .upload-zone h3 { font-family: var(--font-display); font-weight: 450; color: var(--primary); }
+    .upload-zone p { color: var(--ink-faint); font-size: 14px; }
     .file-input { display: none; }
-
-    /* Preview */
-    .preview-box {
-      margin-top: 16px;
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      background: var(--bg);
-      position: relative;
-      display: none;
-    }
-    .preview-box img {
-      width: 100%;
-      max-height: 320px;
-      object-fit: contain;
-      display: block;
-      background: #f0f5eb;
-    }
-    .preview-box .remove-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: rgba(0,0,0,0.6);
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: 0.2s;
-      backdrop-filter: blur(4px);
-    }
-    .preview-box .remove-btn:hover {
-      background: rgba(200,0,0,0.8);
-    }
-
-    /* Action Buttons - Clean Grid */
-    .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      margin-top: 16px;
-    }
-    @media (max-width: 600px) {
-      .action-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
+    .preview-box { margin-top: 18px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.04); position: relative; }
+    .preview-box img { width: 100%; max-height: 350px; object-fit: contain; background: #f0f5eb; display: block; }
+    .result-panel { background: var(--gold-tint); border-radius: 16px; padding: 16px 20px; margin-top: 12px; border-left: 6px solid var(--gold); }
+    .result-panel .plant-name { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .result-panel .disease-tag { display: inline-block; padding: 4px 16px; border-radius: 40px; font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .result-panel .confidence { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
+    .result-panel .confidence span { font-weight: 700; color: var(--primary); }
+    .result-panel .match-info { font-size: 12px; color: var(--ink-faint); margin-top: 4px; }
     .btn {
-      border: none;
-      padding: 12px 16px;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 13px;
-      font-family: var(--font);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: 0.15s ease;
-      text-decoration: none;
+      border: none; padding: 12px 24px; border-radius: 60px; font-weight: 600; font-size: 14px;
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.15s ease;
+      font-family: var(--font-body); background: var(--primary); color: #fff;
+      box-shadow: 0 4px 12px rgba(30,60,44,0.25);
     }
-    .btn:active { transform: scale(0.97); }
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
-    .btn-primary:hover { background: #1a3a22; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn-accent {
-      background: linear-gradient(135deg, #2e7d32, #4CAF50);
-      color: #fff;
-    }
-    .btn-accent:hover { opacity: 0.9; }
-
-    .btn-gemini {
-      background: linear-gradient(135deg, #1a73e8, #4285f4);
-      color: #fff;
-    }
-    .btn-gemini:hover { opacity: 0.9; }
-
-    .btn-outline {
-      background: transparent;
-      border: 1.5px solid var(--border);
-      color: var(--text-soft);
-    }
-    .btn-outline:hover {
-      border-color: var(--text);
-      background: var(--bg);
-    }
-
-    .btn-sm { padding: 8px 14px; font-size: 12px; }
-
-    .btn-camera {
-      background: var(--primary);
-      color: #fff;
-    }
-    .btn-camera:hover { background: #1a3a22; }
-
-    /* Result Panel */
-    .result-panel {
-      margin-top: 16px;
-      padding: 20px 24px;
-      background: #f8faf7;
-      border-radius: var(--radius-sm);
-      border-left: 4px solid var(--accent);
-      display: none;
-    }
-    .result-panel.visible { display: block; }
-    .result-panel .plant {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .result-panel .plant i { color: var(--accent); }
-    .result-panel .disease-tag {
-      display: inline-block;
-      padding: 3px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-    .result-panel .disease-tag.warning { background: #fff3e0; color: #e65100; }
-    .result-panel .disease-tag.danger { background: #fce4ec; color: #c62828; }
-    .result-panel .meta {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      font-size: 13px;
-      color: var(--text-soft);
-    }
-    .result-panel .meta span { display: flex; align-items: center; gap: 6px; }
-    .result-panel .recommendation {
-      margin-top: 12px;
-      padding: 12px 16px;
-      background: #fff;
-      border-radius: var(--radius-sm);
-      border-left: 3px solid var(--accent-gold);
-      font-size: 14px;
-      color: var(--text-soft);
-      line-height: 1.5;
-    }
-    .result-panel .recommendation i { color: var(--accent-gold); margin-right: 8px; }
-
-    /* Status Bar */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-      padding: 10px 0;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-faint);
-    }
-    .status-bar i { color: var(--accent); }
-
-    /* Camera */
-    #cameraVideo {
-      width: 100%;
-      max-height: 350px;
-      border-radius: var(--radius-sm);
-      background: #1a1a1a;
-      display: none;
-      margin-top: 12px;
-    }
-    .camera-controls {
-      display: none;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    /* API Key Input - Minimal */
-    .api-section {
-      margin-top: 16px;
-      padding: 16px 20px;
-      background: var(--bg);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-    }
-    .api-section .label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-soft);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .api-section .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .api-section .row input {
-      flex: 1;
-      min-width: 180px;
-      padding: 10px 16px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-family: var(--font);
-      outline: none;
-      background: #fff;
-      transition: 0.2s;
-    }
-    .api-section .row input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
-    }
-    .api-section .hint {
-      font-size: 11px;
-      color: var(--text-faint);
-      margin-top: 6px;
-    }
-    .api-section .hint a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-    .api-section .hint a:hover { text-decoration: underline; }
-
-    /* Toast */
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: linear-gradient(135deg, #1e3c2c, #2b5a3e); }
+    .btn-primary:hover { background: linear-gradient(135deg, #143022, #1e3c2c); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); box-shadow: none; }
+    .btn-outline:hover { background: var(--gold-tint); }
+    .btn-sm { padding: 8px 16px; font-size: 12px; }
+    .btn-danger { background: #a13d2a; color: #fff; }
+    .btn-danger:hover { background: #7f2f1f; }
+    .btn-success { background: #2b7a3e; color: #fff; }
+    .btn-success:hover { background: #1f6b3a; }
+    .btn-warning { background: #d4a72c; color: #1e2c1e; }
+    .btn-warning:hover { background: #b88f20; }
+    .btn-camera { background: linear-gradient(135deg, #2b5a3e, #1e3c2c); color: #fff; border: 2px solid var(--gold); }
+    .btn-camera:hover { background: linear-gradient(135deg, #1e3c2c, #143022); }
+    .btn-gemini { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
+    .btn-gemini:hover { background: linear-gradient(135deg, #1557b0, #1a73e8); }
     .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--primary);
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 60px;
-      font-weight: 500;
-      font-size: 14px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-      z-index: 999;
-      opacity: 0;
-      pointer-events: none;
-      transition: 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 60px; font-weight: 500;
+      box-shadow: var(--shadow); z-index: 999; opacity: 0; pointer-events: none; transition: 0.25s ease;
+      display: flex; align-items: center; gap: 10px; font-size: 14px;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
-    .toast i { opacity: 0.7; }
-    .toast.error { background: #c62828; }
-
-    .spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 2.5px solid rgba(255,255,255,0.2);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
+    .toast i { color: var(--gold); }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Hidden - Database references hidden from users */
-    .hidden-db { display: none !important; }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 20px 0 10px;
-      font-size: 12px;
-      color: var(--text-faint);
-      border-top: 1px solid var(--border);
-      margin-top: 20px;
-    }
-    .footer i { color: var(--accent); }
-
-    /* Responsive */
-    @media (max-width: 600px) {
-      .card-main { padding: 20px 16px; }
-      .topbar { padding: 12px 16px; }
-      .topbar .brand h1 { font-size: 17px; }
-      .topbar .status .label { display: none; }
-      .action-grid { grid-template-columns: 1fr 1fr; }
-      .result-panel { padding: 16px; }
-      .result-panel .plant { font-size: 19px; }
-      .api-section { padding: 12px 16px; }
-    }
-    @media (max-width: 400px) {
-      .action-grid { grid-template-columns: 1fr; }
-    }
+    .db-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+    .db-stat-item { background: var(--surface); padding: 6px 16px; border-radius: 40px; border: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
+    .db-stat-item strong { color: var(--primary); }
+    .connection-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #d4e8d0; }
+    .connection-status .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .connection-status .dot.online { background: #7bc96a; }
+    .connection-status .dot.offline { background: #e8898f; }
+    .connection-status .dot.connecting { background: #f0b34b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .model-load { background: #eef4ea; border-radius: 40px; padding: 4px 14px; font-size: 12px; color: var(--ink-soft); }
+    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .action-buttons .btn { flex: 1; min-width: 100px; justify-content: center; }
+    #cameraVideo { width: 100%; max-height: 350px; border-radius: 16px; background: #1a1a1a; display: none; }
+    .camera-controls { display: none; gap: 10px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+    .camera-controls .btn { min-width: 120px; justify-content: center; }
+    .reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
+    .reference-item { background: var(--surface); border-radius: 12px; padding: 8px; border: 2px solid var(--border); text-align: center; transition: 0.15s; }
+    .reference-item:hover { border-color: var(--gold); }
+    .reference-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
+    .reference-item .name { font-size: 11px; font-weight: 600; color: var(--primary); margin-top: 4px; }
+    .reference-item .count { font-size: 10px; color: var(--ink-faint); }
+    .history-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .history-item .h-plant { font-weight: 600; color: var(--primary); min-width: 100px; }
+    .history-item .h-disease { padding: 2px 12px; border-radius: 20px; font-size: 12px; background: #e0f0e0; color: #1f6b3a; }
+    .history-item .h-date { font-size: 12px; color: var(--ink-faint); margin-left: auto; }
+    .gemini-badge { background: linear-gradient(135deg, #4285f4, #34a853); color: white; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; margin-left: 6px; }
+    .api-key-input { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+    .api-key-input input { flex: 1; min-width: 200px; padding: 8px 14px; border: 2px solid var(--border); border-radius: 40px; font-size: 13px; font-family: var(--font-body); outline: none; }
+    .api-key-input input:focus { border-color: var(--gold); }
+    @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
 <body>
+<div class="bg-pattern"></div>
 
-<!-- Top Bar -->
 <div class="topbar">
   <div class="brand">
-    <div class="icon"><i class="fas fa-leaf"></i></div>
+    <div class="icon-leaf"><i class="fas fa-leaf"></i></div>
     <div>
-      <h1>AgriScan</h1>
-      <div class="sub">Smart Leaf Diagnosis</div>
+      <h1>AgriScan Zambia</h1>
+      <div class="tagline"><i class="fas fa-database"></i> Crop Leaf Database</div>
     </div>
   </div>
-  <div class="status">
-    <span class="dot" id="statusDot"></span>
-    <span class="label" id="statusText">Ready</span>
-    <span class="badge"><i class="fas fa-brain"></i> AI</span>
+  <div class="status-badge" id="dbStatus">
+    <span class="connection-status">
+      <span class="dot connecting" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </span>
+    <span class="model-load" id="modelStatus">⏳ loading...</span>
   </div>
 </div>
 
 <div class="shell">
-  <!-- Main Card -->
-  <div class="card-main">
-    <div class="header">
-      <h2><i class="fas fa-seedling"></i> Identify Your Crop</h2>
-      <span class="tag"><i class="fas fa-bolt"></i> AI-Powered</span>
+  <!-- main card -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-seedling"></i> Identify & Detect <span class="zambia-flag">🇿🇲</span></h2>
+      <span class="badge-ai"><i class="fas fa-brain"></i> Gemini AI</span>
     </div>
-
-    <!-- Upload Zone -->
-    <div class="upload-zone" id="uploadZone">
-      <span class="icon-big"><i class="fas fa-cloud-upload-alt"></i></span>
-      <h3>Upload a leaf photo</h3>
-      <p>Drag & drop or tap to browse</p>
-      <div class="or">— or —</div>
-      <button class="btn btn-outline btn-sm" id="cameraBtn" type="button"><i class="fas fa-camera"></i> Take Photo</button>
-      <input type="file" class="file-input" id="fileInput" accept="image/*">
-    </div>
-
-    <!-- Camera -->
-    <video id="cameraVideo" autoplay playsinline></video>
-    <div class="camera-controls" id="cameraControls">
-      <button class="btn btn-accent" id="captureBtn"><i class="fas fa-camera"></i> Capture</button>
-      <button class="btn btn-outline" id="stopCameraBtn"><i class="fas fa-stop"></i> Cancel</button>
-    </div>
-
-    <!-- Preview -->
-    <div class="preview-box" id="previewContainer">
-      <img id="previewImage" src="#" alt="preview">
-      <button class="remove-btn" id="clearBtn"><i class="fas fa-times"></i></button>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="action-grid">
-      <button class="btn btn-gemini" id="analyzeGeminiBtn"><i class="fab fa-google"></i> Analyze</button>
-      <button class="btn btn-outline" id="analyzeBtn"><i class="fas fa-microscope"></i> Local AI</button>
-      <button class="btn btn-outline" id="saveRefBtn"><i class="fas fa-save"></i> Save</button>
-    </div>
-
-    <!-- Result -->
-    <div class="result-panel" id="resultPanel">
-      <div class="plant" id="plantName"><i class="fas fa-leaf"></i> <span id="plantNameText">—</span></div>
-      <div style="margin-top:4px;">
-        <span class="disease-tag" id="diseaseTag">Healthy</span>
-        <span style="font-size:12px;color:var(--text-faint);margin-left:10px;" id="methodText"></span>
+    <div class="grid-2">
+      <div>
+        <div class="upload-zone" id="uploadZone">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <h3>Upload or take photo</h3>
+          <p>Drag & drop, click, or use camera</p>
+          <input type="file" class="file-input" id="fileInput" accept="image/*">
+        </div>
+        <video id="cameraVideo" autoplay playsinline></video>
+        <div class="camera-controls" id="cameraControls">
+          <button class="btn btn-success" id="captureBtn"><i class="fas fa-camera"></i> Capture</button>
+          <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> Stop</button>
+        </div>
+        <div id="previewContainer" class="preview-box" style="display:none;">
+          <img id="previewImage" src="#" alt="preview">
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> Camera</button>
+          <button class="btn btn-gemini" id="analyzeGeminiBtn"><i class="fab fa-google"></i> Analyze with Gemini</button>
+          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Local AI</button>
+          <button class="btn btn-success" id="saveRefBtn"><i class="fas fa-save"></i> Add to DB</button>
+          <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
+        </div>
+        <div class="api-key-input">
+          <i class="fas fa-key" style="color:var(--gold);"></i>
+          <input type="password" id="geminiApiKey" placeholder="Enter Gemini API Key (optional, for better results)" style="flex:1;min-width:200px;">
+          <button class="btn btn-sm btn-gemini" id="saveApiKeyBtn"><i class="fas fa-save"></i> Save</button>
+        </div>
+        <p style="font-size:11px;color:var(--ink-faint);margin-top:4px;"><i class="fas fa-info-circle"></i> Get your free API key at <a href="https://ai.google.dev/gemini-api" target="_blank" style="color:var(--gold);">ai.google.dev/gemini-api</a></p>
       </div>
-      <div class="meta">
-        <span><i class="fas fa-chart-line"></i> Confidence: <strong id="confidenceText">—</strong></span>
-        <span id="symptomsText"></span>
-      </div>
-      <div class="recommendation" id="recommendationText">
-        <i class="fas fa-lightbulb"></i> <span id="recText">Analysis will appear here</span>
-      </div>
-    </div>
-
-    <!-- Status Bar -->
-    <div class="status-bar">
-      <span><i class="fas fa-database"></i> <span id="refCount">0</span> references</span>
-      <span><i class="fas fa-history"></i> <span id="historyCount">0</span> scans</span>
-      <span style="margin-left:auto;font-size:11px;" id="modelStatus">Loading AI...</span>
-    </div>
-
-    <!-- API Key Section (hidden from regular users, visible for setup) -->
-    <div class="api-section" id="apiSection">
-      <div class="label"><i class="fas fa-key"></i> API Key (admin setup)</div>
-      <div class="row">
-        <input type="password" id="geminiApiKey" placeholder="Enter Gemini API key for AI analysis">
-        <button class="btn btn-primary btn-sm" id="saveApiKeyBtn"><i class="fas fa-save"></i> Save</button>
-      </div>
-      <div class="hint">
-        <i class="fas fa-info-circle"></i> Get a free key at <a href="https://ai.google.dev/gemini-api" target="_blank">ai.google.dev/gemini-api</a>
+      <div>
+        <div class="result-panel" id="resultPanel">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fas fa-robot" style="color:var(--gold);font-size:20px;"></i>
+              <span style="font-weight:600;color:var(--primary);">Diagnosis</span>
+              <span id="analysisMethod" style="font-size:11px;color:var(--ink-faint);"></span>
+            </div>
+            <div>
+              <button class="btn btn-sm btn-warning" id="retryModelBtn"><i class="fas fa-sync-alt"></i> Reload AI</button>
+            </div>
+          </div>
+          <div id="resultContent">
+            <p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>
+          </div>
+        </div>
+        <div style="margin-top:12px;background:#eef4ea;border-radius:40px;padding:8px 16px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:500;"><i class="fas fa-database" style="color:var(--gold);"></i> <span id="refCount">0</span> leaf references</span>
+          <span style="font-size:11px;color:var(--ink-faint);">|</span>
+          <span style="font-size:11px;color:var(--ink-soft);"><i class="fas fa-corn"></i> Maize · Cassava · Groundnuts · Pumpkins · More</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <div class="footer">
-    <i class="fas fa-leaf"></i> AgriScan · AI Crop Diagnosis
+  <!-- Reference Database -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-database"></i> Leaf Reference Database</h2>
+      <button class="btn btn-sm btn-danger" id="clearRefsBtn"><i class="fas fa-trash"></i> Clear All</button>
+    </div>
+    <div id="referenceGrid" class="reference-grid">
+      <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
+        <i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+        <p>No leaf references yet. Upload a leaf image and click "Add to DB"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- history -->
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fas fa-history"></i> Scan history <span style="font-size:14px;font-weight:400;color:var(--ink-faint);" id="historyCount">(0)</span></h2>
+      <button class="btn btn-sm btn-outline" id="refreshHistoryBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+    <div id="historyList">
+      <div style="text-align:center;padding:20px;color:var(--ink-faint);">
+        <i class="fas fa-cloud" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+        Loading from Supabase...
+      </div>
+    </div>
+  </div>
+  <div class="footer-note">
+    <i class="fas fa-leaf" style="color:var(--gold);"></i> AgriScan Zambia · Crop Leaf Database · AI Recognition
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg">Ready</span></div>
 
 <script>
   (function() {
     "use strict";
 
-    // -------------------- CONFIG --------------------
     const SUPABASE_URL = 'https://injvpbahfqltozrsqcmc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluanZwYmFoZnFsdG96cnNxY21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MDM0MzIsImV4cCI6MjEwMzQ3OTQzMn0.JoGibO2fqrw7sbmBbQ55EUKONQl94cqPTmkqxNoiXXk';
+    let supabase = null;
+    let isConnected = false;
 
+    // ---------- GEMINI API ----------
+    let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+    // gemini-2.5-flash was retired for new API keys (Aug 2026). Try current models in order,
+    // falling back automatically if one 404s so this doesn't silently break again.
     const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
-    const GEMINI_MODEL_CANDIDATES = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const GEMINI_MODEL_CANDIDATES = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-2.5-flash'];
 
-    // Crop database (internal - hidden from users)
+    // ---------- CROP LEAF DATABASE ----------
     const CROP_DATABASE = [
       { name: "Maize", aliases: ["corn", "mealie"], leaf_type: "long, broad, parallel veins", diseases: ["Gray Leaf Spot", "Northern Leaf Blight", "Maize Lethal Necrosis"] },
       { name: "Cassava", aliases: ["manioc", "yuca"], leaf_type: "palmate, finger-like lobes", diseases: ["Cassava Mosaic Disease", "Brown Streak", "Cassava Bacterial Blight"] },
@@ -632,196 +278,23 @@
       { name: "Millet", aliases: ["finger millet", "rapoko"], leaf_type: "long, narrow, pointed", diseases: ["Blast", "Downy Mildew"] },
     ];
 
-    // -------------------- STATE --------------------
-    let supabase = null;
-    let isConnected = false;
-    let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+    // ---------- LEAF REFERENCE STORAGE ----------
     let leafReferences = [];
     let currentImageData = null;
     let currentImageElement = null;
     let lastResult = null;
+
+    // ---------- TENSORFLOW.JS + MOBILENET ----------
     let mobilenetModel = null;
     let modelReady = false;
     let modelLoading = false;
-    let cameraStream = null;
-    let isCameraActive = false;
 
-    // -------------------- DOM REFS --------------------
-    const $ = id => document.getElementById(id);
-    const statusDot = $('statusDot');
-    const statusText = $('statusText');
-    const uploadZone = $('uploadZone');
-    const fileInput = $('fileInput');
-    const previewContainer = $('previewContainer');
-    const previewImage = $('previewImage');
-    const analyzeBtn = $('analyzeBtn');
-    const analyzeGeminiBtn = $('analyzeGeminiBtn');
-    const clearBtn = $('clearBtn');
-    const cameraBtn = $('cameraBtn');
-    const captureBtn = $('captureBtn');
-    const stopCameraBtn = $('stopCameraBtn');
-    const saveRefBtn = $('saveRefBtn');
-    const cameraVideo = $('cameraVideo');
-    const cameraControls = $('cameraControls');
-    const resultPanel = $('resultPanel');
-    const plantNameText = $('plantNameText');
-    const diseaseTag = $('diseaseTag');
-    const confidenceText = $('confidenceText');
-    const symptomsText = $('symptomsText');
-    const recommendationText = $('recommendationText');
-    const recText = $('recText');
-    const methodText = $('methodText');
-    const toast = $('toast');
-    const toastMsg = $('toastMsg');
-    const geminiApiKeyInput = $('geminiApiKey');
-    const saveApiKeyBtn = $('saveApiKeyBtn');
-    const refCount = $('refCount');
-    const historyCount = $('historyCount');
-    const modelStatus = $('modelStatus');
-
-    // Load saved key
-    if (geminiApiKey) geminiApiKeyInput.value = geminiApiKey;
-
-    // -------------------- TOAST --------------------
-    function showToast(msg, isError = false) {
-      toastMsg.textContent = msg;
-      toast.classList.add('show');
-      toast.className = 'toast' + (isError ? ' error' : '');
-      clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    function setStatus(status, message) {
-      statusDot.className = 'dot';
-      statusText.textContent = message;
-    }
-
-    // -------------------- CAMERA --------------------
-    async function startCamera() {
-      try {
-        if (isCameraActive) return;
-        if (!navigator.mediaDevices?.getUserMedia) {
-          showToast('Camera not supported', true);
-          return;
-        }
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
-        });
-        cameraVideo.srcObject = cameraStream;
-        cameraVideo.style.display = 'block';
-        cameraControls.style.display = 'flex';
-        uploadZone.style.display = 'none';
-        previewContainer.style.display = 'none';
-        isCameraActive = true;
-      } catch (err) {
-        showToast('Camera error: ' + err.message, true);
-      }
-    }
-
-    function stopCamera() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-      }
-      cameraVideo.style.display = 'none';
-      cameraControls.style.display = 'none';
-      isCameraActive = false;
-    }
-
-    function capturePhoto() {
-      if (!isCameraActive || !cameraStream) {
-        showToast('Start camera first', true);
-        return;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = cameraVideo.videoWidth || 1280;
-      canvas.height = cameraVideo.videoHeight || 720;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
-      currentImageData = canvas.toDataURL('image/jpeg', 0.92);
-      previewImage.src = currentImageData;
-      previewContainer.style.display = 'block';
-      const img = new Image();
-      img.onload = function() { currentImageElement = img; };
-      img.src = currentImageData;
-      stopCamera();
-      uploadZone.style.display = 'none';
-      showToast('Photo captured');
-      hideResult();
-    }
-
-    cameraBtn.addEventListener('click', startCamera);
-    captureBtn.addEventListener('click', capturePhoto);
-    stopCameraBtn.addEventListener('click', stopCamera);
-
-    // -------------------- UPLOAD --------------------
-    uploadZone.addEventListener('click', () => {
-      if (isCameraActive) stopCamera();
-      fileInput.click();
-    });
-    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-    uploadZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadZone.classList.remove('dragover');
-      if (isCameraActive) stopCamera();
-      if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); }
-    });
-    fileInput.addEventListener('change', function() {
-      if (this.files.length) {
-        if (isCameraActive) stopCamera();
-        handleFile(this.files[0]);
-      }
-    });
-
-    function handleFile(file) {
-      if (!file.type.startsWith('image/')) { showToast('Please upload an image', true); return; }
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        currentImageData = e.target.result;
-        previewImage.src = currentImageData;
-        previewContainer.style.display = 'block';
-        uploadZone.style.display = 'none';
-        const img = new Image();
-        img.onload = function() { currentImageElement = img; };
-        img.src = currentImageData;
-        showToast('Image loaded');
-        hideResult();
-      };
-      reader.readAsDataURL(file);
-    }
-
-    // -------------------- CLEAR --------------------
-    clearBtn.addEventListener('click', function() {
-      if (isCameraActive) stopCamera();
-      currentImageData = null;
-      currentImageElement = null;
-      fileInput.value = '';
-      previewContainer.style.display = 'none';
-      previewImage.src = '#';
-      uploadZone.style.display = 'block';
-      cameraVideo.style.display = 'none';
-      cameraControls.style.display = 'none';
-      hideResult();
-      showToast('Cleared');
-    });
-
-    function hideResult() {
-      resultPanel.classList.remove('visible');
-      resultPanel.style.display = 'none';
-    }
-
-    function showResult() {
-      resultPanel.style.display = 'block';
-      resultPanel.classList.add('visible');
-    }
-
-    // -------------------- IMAGE SIMILARITY (internal) --------------------
+    // ---------- IMAGE SIMILARITY ----------
     function getImageHash(imageElement, size = 32) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = size; canvas.height = size;
+      canvas.width = size;
+      canvas.height = size;
       ctx.drawImage(imageElement, 0, 0, size, size);
       const imageData = ctx.getImageData(0, 0, size, size);
       const data = imageData.data;
@@ -849,18 +322,24 @@
     function getImageFeatures(imageElement) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 100; canvas.height = 100;
+      canvas.width = 100;
+      canvas.height = 100;
       ctx.drawImage(imageElement, 0, 0, 100, 100);
       const imageData = ctx.getImageData(0, 0, 100, 100);
       const data = imageData.data;
       const hist = { r: 0, g: 0, b: 0, brightness: 0 };
       let count = 0;
       for (let i = 0; i < data.length; i += 4) {
-        hist.r += data[i]; hist.g += data[i+1]; hist.b += data[i+2];
+        hist.r += data[i];
+        hist.g += data[i+1];
+        hist.b += data[i+2];
         hist.brightness += (data[i] + data[i+1] + data[i+2]) / 3;
         count++;
       }
-      hist.r /= count; hist.g /= count; hist.b /= count; hist.brightness /= count;
+      hist.r /= count;
+      hist.g /= count;
+      hist.b /= count;
+      hist.brightness /= count;
       const hash = getImageHash(imageElement);
       return { hist, hash };
     }
@@ -878,166 +357,266 @@
       return Math.max(0, 1 - totalScore);
     }
 
-    // -------------------- LOAD MOBILENET --------------------
+    // ---------- LOAD MOBILENET ----------
     async function loadMobileNet() {
+      const statusEl = document.getElementById('modelStatus');
       if (modelLoading) return false;
       modelLoading = true;
-      modelStatus.textContent = 'Loading AI...';
+      statusEl.textContent = '⏳ loading AI...';
+      
       try {
         const loadPromise = mobilenet.load({ version: 2, alpha: 1.0 });
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000));
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 30000)
+        );
         mobilenetModel = await Promise.race([loadPromise, timeoutPromise]);
         modelReady = true;
         modelLoading = false;
-        modelStatus.textContent = 'AI Ready ✅';
+        statusEl.textContent = '✅ AI ready';
+        showToast('🧠 AI model loaded');
         return true;
       } catch (err) {
         modelLoading = false;
-        modelStatus.textContent = 'Fallback mode';
+        statusEl.textContent = '⚠️ fallback mode';
+        showToast('⚠️ AI fallback mode (image matching only)', true);
         return false;
       }
     }
 
-    // -------------------- GEMINI ANALYSIS --------------------
+    // ---------- GEMINI API ANALYSIS ----------
     async function analyzeWithGemini(imageData) {
       if (!geminiApiKey) {
-        showToast('Please set Gemini API key first', true);
+        showToast('⚠️ Please enter your Gemini API key first', true);
         return null;
       }
+
       try {
+        // Convert base64 to proper format
         const base64Data = imageData.split(',')[1] || imageData;
+        
         const requestBody = {
-          contents: [{
-            parts: [
-              { text: `You are an agricultural expert. Analyze this leaf image and provide a JSON response with:
-                1. plant: The plant name (e.g., "Maize", "Cassava", "Groundnuts")
-                2. disease: The disease name or "Healthy" if no disease
-                3. confidence: Percentage confidence (0-100)
-                4. recommendation: Brief treatment/prevention recommendation
-                5. symptoms: Brief description of visible symptoms
-                Respond ONLY with valid JSON.` },
-              { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-            ]
-          }],
-          generationConfig: { temperature: 0.2, topK: 32, topP: 0.95, maxOutputTokens: 1024 }
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are an agricultural expert. Analyze this leaf image and provide a JSON response with the following fields:
+                  1. plant: The name of the plant (e.g., "Maize", "Cassava", "Groundnuts")
+                  2. disease: The disease name if detected, or "Healthy" if no disease
+                  3. confidence: Percentage confidence (0-100) in your identification
+                  4. recommendation: Brief treatment/prevention recommendation
+                  5. symptoms: Brief description of visible symptoms
+                  
+                  Respond ONLY with valid JSON.`
+                },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 32,
+            topP: 0.95,
+            maxOutputTokens: 1024
+          }
         };
 
+        // Fetch with a hard timeout so a stuck request can't hang the UI forever.
+        function fetchWithTimeout(url, options, ms) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), ms);
+          return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+        }
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // Status codes worth retrying: 404 (wrong/retired model name -> try next model),
+        // 429 (rate limited) and 503 (temporarily overloaded) -> both worth a short
+        // backoff-and-retry before giving up on that model.
         let response = null;
         let lastError = null;
 
+        outer:
         for (const model of GEMINI_MODEL_CANDIDATES) {
-          try {
-            const url = `${GEMINI_API_BASE}${model}:generateContent?key=${geminiApiKey}`;
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(requestBody)
-            });
-            if (res.ok) { response = res; break; }
-            if (res.status === 404) continue;
-            const errorText = await res.text();
-            lastError = new Error(`${model} → ${res.status}: ${errorText}`);
-            if (res.status === 429 || res.status === 503) { await new Promise(r => setTimeout(r, 1000)); continue; }
-            throw lastError;
-          } catch (e) { lastError = e; }
+          const url = `${GEMINI_API_BASE}${model}:generateContent?key=${geminiApiKey}`;
+          const maxAttemptsForModel = 2; // one retry per model on overload/rate-limit
+
+          for (let attempt = 1; attempt <= maxAttemptsForModel; attempt++) {
+            try {
+              const res = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+              }, 20000);
+
+              if (res.ok) {
+                response = res;
+                break outer;
+              }
+
+              const errorText = await res.text();
+              lastError = new Error(`${model} → ${res.status}: ${errorText}`);
+
+              if (res.status === 404) {
+                // Model doesn't exist for this key -> no point retrying, go to next model
+                break;
+              }
+              if (res.status === 429 || res.status === 503) {
+                if (attempt < maxAttemptsForModel) {
+                  showToast(`⏳ ${model} is busy, retrying...`);
+                  await sleep(1500);
+                  continue; // retry same model once
+                }
+                break; // exhausted retries for this model, try the next one
+              }
+              // Any other error (bad key, safety block, etc.) won't be fixed by
+              // retrying or switching models — surface it immediately.
+              throw lastError;
+            } catch (innerErr) {
+              if (innerErr.name === 'AbortError') {
+                lastError = new Error(`${model} timed out after 20s`);
+                break; // try next model
+              }
+              if (innerErr === lastError || /404|429|503/.test(String(innerErr.message))) {
+                lastError = innerErr;
+                break;
+              }
+              throw innerErr;
+            }
+          }
         }
 
-        if (!response) throw lastError || new Error('All models failed');
+        if (!response) {
+          throw lastError || new Error('All Gemini model candidates failed');
+        }
 
         const data = await response.json();
         const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        // Extract JSON from response
         const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('No valid JSON found');
+        if (!jsonMatch) {
+          throw new Error('No valid JSON found in response');
+        }
 
         const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Map response to our format
         return {
           name: parsed.plant || 'Unknown',
-          disease: parsed.disease || 'Healthy',
+          disease: parsed.disease || 'Pending',
           confidence: Math.min(100, Math.max(0, parseInt(parsed.confidence) || 70)),
           recommendation: parsed.recommendation || 'No recommendation available',
-          symptoms: parsed.symptoms || '',
+          symptoms: parsed.symptoms || 'No symptoms described',
           method: 'Gemini AI',
+          leaf_type: 'Analyzed by Gemini'
         };
       } catch (err) {
-        console.error('Gemini Error:', err);
-        showToast('Gemini error: ' + err.message, true);
+        console.error('Gemini API Error:', err);
+        showToast('❌ Gemini error: ' + err.message, true);
         return null;
       }
     }
 
-    // -------------------- LOCAL IDENTIFICATION --------------------
+    // ---------- IDENTIFY LEAF (Local AI + Database) ----------
     async function identifyLeafLocal(imageElement) {
+      // Step 1: Try AI classification if available
       if (modelReady && mobilenetModel) {
         try {
           const predictions = await mobilenetModel.classify(imageElement);
           if (predictions && predictions.length > 0) {
             const topClass = predictions[0].className.toLowerCase();
             for (const crop of CROP_DATABASE) {
-              if (topClass.includes(crop.name.toLowerCase()) || crop.aliases.some(a => topClass.includes(a))) {
+              if (topClass.includes(crop.name.toLowerCase()) || 
+                  crop.aliases.some(a => topClass.includes(a))) {
                 return {
                   name: crop.name,
                   confidence: Math.round(predictions[0].probability * 100),
                   method: 'AI Classification',
-                  disease: crop.diseases?.[0] || 'Healthy',
-                  recommendation: `Monitor for ${crop.diseases?.[0] || 'common pests'}`,
-                  symptoms: 'Visible symptoms detected'
+                  leaf_type: crop.leaf_type,
+                  disease: crop.diseases?.[0] || 'Pending',
+                  recommendation: `Monitor for ${crop.diseases?.[0] || 'common pests'}`
                 };
               }
             }
           }
-        } catch (e) {}
+        } catch (err) {
+          console.warn('AI classification failed, using database matching');
+        }
       }
 
-      // Fallback: leaf shape analysis
+      // Step 2: Database matching using image similarity
       if (leafReferences.length > 0) {
-        let bestMatch = null, bestSimilarity = 0;
+        let bestMatch = null;
+        let bestSimilarity = 0;
+        
         for (const ref of leafReferences) {
           try {
             const refImg = new Image();
             refImg.src = ref.imageData;
-            await new Promise(r => { refImg.onload = r; refImg.onerror = r; });
+            await new Promise((resolve) => {
+              refImg.onload = resolve;
+              refImg.onerror = resolve;
+            });
             if (refImg.complete && refImg.naturalWidth > 0) {
               const similarity = compareImages(imageElement, refImg);
-              if (similarity > bestSimilarity) { bestSimilarity = similarity; bestMatch = ref; }
+              if (similarity > bestSimilarity) {
+                bestSimilarity = similarity;
+                bestMatch = ref;
+              }
             }
           } catch (e) {}
         }
+        
         if (bestMatch && bestSimilarity > 0.3) {
           return {
             name: bestMatch.name,
             confidence: Math.round(bestSimilarity * 100),
             method: 'Database Match',
-            disease: 'Healthy',
-            recommendation: 'No disease detected',
-            symptoms: 'Matches reference image'
+            leaf_type: 'Matched from database',
+            matchCount: bestMatch.count || 1,
+            disease: 'Pending',
+            recommendation: 'Add disease info manually'
           };
         }
       }
 
-      // Final fallback
+      // Step 3: Fallback - use leaf shape analysis
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 100; canvas.height = 100;
+      canvas.width = 100;
+      canvas.height = 100;
       ctx.drawImage(imageElement, 0, 0, 100, 100);
       const imageData = ctx.getImageData(0, 0, 100, 100);
       const data = imageData.data;
-      let minX = 100, maxX = 0, minY = 100, maxY = 0, pixelCount = 0;
+      
+      let minX = 100, maxX = 0, minY = 100, maxY = 0;
+      let pixelCount = 0;
       for (let y = 0; y < 100; y++) {
         for (let x = 0; x < 100; x++) {
           const idx = (y * 100 + x) * 4;
           if (data[idx] < 200 || data[idx+1] < 200 || data[idx+2] < 200) {
-            if (x < minX) minX = x; if (x > maxX) maxX = x;
-            if (y < minY) minY = y; if (y > maxY) maxY = y;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
             pixelCount++;
           }
         }
       }
+      
       const width = maxX - minX + 1;
       const height = maxY - minY + 1;
       const aspectRatio = width / height;
       const density = pixelCount / (width * height);
+      
       let bestCrop = CROP_DATABASE[0];
       let bestScore = 0;
+      
       for (const crop of CROP_DATABASE) {
         let score = 0;
         const leafType = crop.leaf_type.toLowerCase();
@@ -1048,109 +627,239 @@
         if (leafType.includes('palmate')) score += 0.2;
         if (leafType.includes('trifoliate')) score += 0.2;
         if (density > 0.5) score += 0.2;
-        if (score > bestScore) { bestScore = score; bestCrop = crop; }
+        if (score > bestScore) {
+          bestScore = score;
+          bestCrop = crop;
+        }
       }
+      
       return {
         name: bestCrop.name,
         confidence: Math.round(Math.min(95, 60 + bestScore * 40)),
         method: 'Leaf Analysis',
-        disease: 'Healthy',
-        recommendation: 'Consult a local expert for confirmation',
-        symptoms: 'Leaf analyzed successfully'
+        leaf_type: bestCrop.leaf_type,
+        matchCount: 0,
+        disease: 'Pending',
+        recommendation: 'Please consult a local agricultural expert'
       };
     }
 
-    // -------------------- DISPLAY RESULT --------------------
-    function displayResult(result, isGemini = false) {
-      showResult();
-      plantNameText.textContent = result.name;
+    // ---------- UI ----------
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImage = document.getElementById('previewImage');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const analyzeGeminiBtn = document.getElementById('analyzeGeminiBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const stopCameraBtn = document.getElementById('stopCameraBtn');
+    const saveRefBtn = document.getElementById('saveRefBtn');
+    const retryModelBtn = document.getElementById('retryModelBtn');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraControls = document.getElementById('cameraControls');
+    const resultContent = document.getElementById('resultContent');
+    const historyList = document.getElementById('historyList');
+    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+    const referenceGrid = document.getElementById('referenceGrid');
+    const clearRefsBtn = document.getElementById('clearRefsBtn');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+    const historyCountEl = document.getElementById('historyCount');
+    const refCountEl = document.getElementById('refCount');
+    const geminiApiKeyInput = document.getElementById('geminiApiKey');
+    const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+    const analysisMethod = document.getElementById('analysisMethod');
 
-      const isHealthy = result.disease?.toLowerCase() === 'healthy' || result.disease?.toLowerCase() === 'pending';
-      diseaseTag.textContent = result.disease || 'Healthy';
-      diseaseTag.className = 'disease-tag' + (isHealthy ? '' : ' warning');
-      if (!isHealthy && result.disease?.toLowerCase() !== 'pending') {
-        diseaseTag.className = 'disease-tag danger';
-      }
+    let cameraStream = null;
+    let isCameraActive = false;
 
-      confidenceText.textContent = result.confidence + '%';
-      methodText.textContent = isGemini ? '🤖 Gemini AI' : '🔬 ' + result.method;
-
-      if (result.symptoms && result.symptoms !== 'No symptoms described') {
-        symptomsText.innerHTML = `<i class="fas fa-stethoscope"></i> ${result.symptoms}`;
-        symptomsText.style.display = 'flex';
-      } else {
-        symptomsText.style.display = 'none';
-      }
-
-      recText.textContent = result.recommendation || 'No recommendation available';
-      lastResult = result;
+    // Load saved API key
+    if (geminiApiKey) {
+      geminiApiKeyInput.value = geminiApiKey;
     }
 
-    // -------------------- ANALYZE GEMINI --------------------
-    analyzeGeminiBtn.addEventListener('click', async function() {
-      if (!currentImageData || !currentImageElement) {
-        showToast('Please upload or capture an image first', true);
+    // Save API key
+    saveApiKeyBtn.addEventListener('click', function() {
+      const key = geminiApiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem('gemini_api_key', key);
+        geminiApiKey = key;
+        showToast('✅ Gemini API key saved');
+      } else {
+        showToast('⚠️ Please enter a valid API key', true);
+      }
+    });
+
+    // Also save on Enter key
+    geminiApiKeyInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        saveApiKeyBtn.click();
+      }
+    });
+
+    function showToast(msg, isError = false) {
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      toast.style.background = isError ? '#a13d2a' : 'var(--primary)';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function setConnectionStatus(status, message) {
+      statusDot.className = 'dot ' + status;
+      statusText.textContent = message;
+    }
+
+    // ---------- CAMERA ----------
+    async function startCamera() {
+      try {
+        if (isCameraActive) { showToast('📷 Camera active'); return; }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('❌ Camera not supported', true);
+          return;
+        }
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        cameraVideo.srcObject = cameraStream;
+        cameraVideo.style.display = 'block';
+        cameraControls.style.display = 'flex';
+        uploadZone.style.display = 'none';
+        previewContainer.style.display = 'none';
+        isCameraActive = true;
+        showToast('📷 Camera ready. Capture a leaf.');
+      } catch (err) {
+        showToast('❌ Camera error: ' + err.message, true);
+      }
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      cameraVideo.style.display = 'none';
+      cameraControls.style.display = 'none';
+      isCameraActive = false;
+    }
+
+    function capturePhoto() {
+      if (!isCameraActive || !cameraStream) {
+        showToast('❌ Start camera first', true);
         return;
       }
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraVideo.videoWidth || 1280;
+      canvas.height = cameraVideo.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+      currentImageData = canvas.toDataURL('image/jpeg', 0.95);
+      previewImage.src = currentImageData;
+      previewContainer.style.display = 'block';
+      const img = new Image();
+      img.onload = function() { currentImageElement = img; };
+      img.src = currentImageData;
+      stopCamera();
+      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Photo captured. Click Analyze with Gemini or Local AI.</p>`;
+      showToast('📸 Photo captured');
+    }
+
+    cameraBtn.addEventListener('click', startCamera);
+    captureBtn.addEventListener('click', capturePhoto);
+    stopCameraBtn.addEventListener('click', stopCamera);
+
+    // ---------- UPLOAD ----------
+    uploadZone.addEventListener('click', () => {
+      if (isCameraActive) stopCamera();
+      fileInput.click();
+    });
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (isCameraActive) stopCamera();
+      if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); }
+    });
+    fileInput.addEventListener('change', function() { 
+      if (this.files.length) {
+        if (isCameraActive) stopCamera();
+        handleFile(this.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) { showToast('⚠️ Please upload an image', true); return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        currentImageData = e.target.result;
+        previewImage.src = currentImageData;
+        previewContainer.style.display = 'block';
+        uploadZone.style.display = 'none';
+        const img = new Image();
+        img.onload = function() { currentImageElement = img; };
+        img.src = currentImageData;
+        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Image loaded. Click Analyze with Gemini or Local AI.</p>`;
+        showToast('📸 Image loaded');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ---------- CLEAR ----------
+    clearBtn.addEventListener('click', function() {
+      if (isCameraActive) stopCamera();
+      currentImageData = null;
+      currentImageElement = null;
+      fileInput.value = '';
+      previewContainer.style.display = 'none';
+      previewImage.src = '#';
+      uploadZone.style.display = 'block';
+      cameraVideo.style.display = 'none';
+      cameraControls.style.display = 'none';
+      resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>`;
+      analysisMethod.textContent = '';
+      showToast('Cleared');
+    });
+
+    // ---------- ANALYZE WITH GEMINI ----------
+    analyzeGeminiBtn.addEventListener('click', async function() {
+      if (!currentImageData || !currentImageElement) {
+        showToast('⚠️ Please upload or capture an image first', true);
+        return;
+      }
+
       if (!geminiApiKey) {
-        showToast('Please set Gemini API key first', true);
+        showToast('⚠️ Please enter your Gemini API key first', true);
         geminiApiKeyInput.focus();
         return;
       }
 
+      resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
+        <span class="spinner"></span> <span style="font-weight:500;">🧠 Analyzing with Gemini AI...</span>
+      </div>`;
       analyzeGeminiBtn.disabled = true;
-      analyzeGeminiBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
 
       try {
         let result = await analyzeWithGemini(currentImageData);
-        if (result) {
-          displayResult(result, true);
-          showToast('✅ ' + result.name + ' identified');
-        } else {
-          // Fallback to local
-          showToast('Gemini unavailable, using Local AI');
-          const localResult = await identifyLeafLocal(currentImageElement);
-          displayResult(localResult, false);
-          showToast('✅ ' + localResult.name + ' identified (Local AI)');
+        let usedLocalFallback = false;
+
+        if (!result) {
+          // Gemini is down/overloaded/misconfigured — fall back to the local
+          // analyzer automatically instead of leaving the user stuck.
+          showToast('⚠️ Gemini unavailable, using Local AI instead');
+          result = await identifyLeafLocal(currentImageElement);
+          usedLocalFallback = true;
         }
+
+        lastResult = result;
+        analysisMethod.textContent = usedLocalFallback ? `🔬 ${result.method} (Gemini unavailable)` : '🔬 Gemini AI';
+
         // Save to Supabase
-        if (supabase && isConnected) {
-          try {
-            await supabase.from('scans').insert([{
-              plant: result?.name || 'Unknown',
-              disease: result?.disease || 'Healthy',
-              confidence: result?.confidence || 70,
-              recommendation: result?.recommendation || '',
-              timestamp: Date.now(),
-              image_data: currentImageData,
-              method: result ? 'Gemini AI' : 'Local AI'
-            }]);
-            loadHistory();
-          } catch (e) {}
-        }
-      } catch (err) {
-        showToast('Error: ' + err.message, true);
-      } finally {
-        analyzeGeminiBtn.disabled = false;
-        analyzeGeminiBtn.innerHTML = '<i class="fab fa-google"></i> Analyze';
-      }
-    });
-
-    // -------------------- ANALYZE LOCAL --------------------
-    analyzeBtn.addEventListener('click', async function() {
-      if (!currentImageData || !currentImageElement) {
-        showToast('Please upload or capture an image first', true);
-        return;
-      }
-
-      analyzeBtn.disabled = true;
-      analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
-
-      try {
-        const result = await identifyLeafLocal(currentImageElement);
-        displayResult(result, false);
-        showToast('✅ ' + result.name + ' identified');
-
         if (supabase && isConnected) {
           try {
             await supabase.from('scans').insert([{
@@ -1160,27 +869,106 @@
               recommendation: result.recommendation || '',
               timestamp: Date.now(),
               image_data: currentImageData,
+              method: usedLocalFallback ? result.method : 'Gemini AI'
+            }]);
+            loadHistory();
+          } catch (e) {}
+        }
+
+        // Display result
+        const diseaseColor = result.disease && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
+        const sourceBadge = usedLocalFallback
+          ? `<i class="fas fa-microscope"></i> ${result.method} (Gemini busy)`
+          : `<i class="fab fa-google"></i> Gemini AI`;
+        resultContent.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
+              <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
+              <span style="font-size:11px;color:var(--ink-faint);">${sourceBadge}</span>
+            </div>
+            <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
+            ${result.symptoms ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-stethoscope"></i> Symptoms: ${result.symptoms}</div>` : ''}
+            ${usedLocalFallback && result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leaf_type}</div>` : ''}
+            ${result.recommendation ? `<div style="font-size:13px;color:var(--ink-soft);background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);margin-top:6px;">
+              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> Recommendation: ${result.recommendation}
+            </div>` : ''}
+          </div>
+        `;
+        showToast(`✅ Identified: ${result.name}${result.disease && result.disease.toLowerCase() !== 'healthy' ? ` - ${result.disease}` : ''}`);
+      } catch (err) {
+        showToast('❌ Error: ' + err.message, true);
+        resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-exclamation-triangle" style="color:var(--gold);"></i> Error: ${err.message}</p>`;
+      } finally {
+        analyzeGeminiBtn.disabled = false;
+      }
+    });
+
+    // ---------- ANALYZE LOCAL ----------
+    analyzeBtn.addEventListener('click', async function() {
+      if (!currentImageData || !currentImageElement) {
+        showToast('⚠️ Please upload or capture an image first', true);
+        return;
+      }
+
+      resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
+        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf locally...</span>
+      </div>`;
+      analyzeBtn.disabled = true;
+
+      try {
+        const result = await identifyLeafLocal(currentImageElement);
+        lastResult = result;
+        analysisMethod.textContent = '🔬 Local AI';
+
+        // Save to Supabase
+        if (supabase && isConnected) {
+          try {
+            await supabase.from('scans').insert([{
+              plant: result.name,
+              disease: result.disease || 'Pending',
+              confidence: result.confidence,
+              recommendation: result.recommendation || '',
+              timestamp: Date.now(),
+              image_data: currentImageData,
               method: result.method
             }]);
             loadHistory();
           } catch (e) {}
         }
+
+        const diseaseColor = result.disease && result.disease.toLowerCase() !== 'pending' && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
+        resultContent.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
+              <span class="disease-tag" style="background:${diseaseColor};color:white;">${result.disease || 'Healthy'}</span>
+              <span style="font-size:11px;color:var(--ink-faint);">${result.method}</span>
+            </div>
+            <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span>${result.confidence}%</span></div>
+            ${result.leaf_type ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leaf_type}</div>` : ''}
+            ${result.matchCount ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-database"></i> Based on ${result.matchCount} reference images</div>` : ''}
+            ${result.recommendation ? `<div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);">
+              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> ${result.recommendation}
+            </div>` : ''}
+          </div>
+        `;
+        showToast(`✅ Identified: ${result.name}`);
       } catch (err) {
-        showToast('Error: ' + err.message, true);
+        showToast('❌ Error: ' + err.message, true);
       } finally {
         analyzeBtn.disabled = false;
-        analyzeBtn.innerHTML = '<i class="fas fa-microscope"></i> Local AI';
       }
     });
 
-    // -------------------- SAVE REFERENCE (internal) --------------------
+    // ---------- SAVE REFERENCE ----------
     saveRefBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
-        showToast('Please upload an image first', true);
+        showToast('⚠️ Please upload or capture an image first', true);
         return;
       }
       if (!lastResult) {
-        showToast('Please analyze the image first', true);
+        showToast('⚠️ Please analyze the image first', true);
         return;
       }
 
@@ -1189,6 +977,7 @@
         existing.imageData = currentImageData;
         existing.timestamp = Date.now();
         existing.count = (existing.count || 1) + 1;
+        showToast(`✅ Updated ${lastResult.name} reference (${existing.count} images)`);
       } else {
         leafReferences.push({
           id: Date.now(),
@@ -1197,8 +986,8 @@
           timestamp: Date.now(),
           count: 1
         });
+        showToast(`✅ Added ${lastResult.name} to database`);
       }
-      showToast('✅ Saved to database');
 
       if (supabase && isConnected) {
         try {
@@ -1210,45 +999,89 @@
           }]);
         } catch (e) {}
       }
-      updateStats();
+
+      renderReferences();
     });
 
-    // -------------------- API KEY --------------------
-    saveApiKeyBtn.addEventListener('click', function() {
-      const key = geminiApiKeyInput.value.trim();
-      if (key) {
-        localStorage.setItem('gemini_api_key', key);
-        geminiApiKey = key;
-        showToast('✅ API key saved');
-      } else {
-        showToast('Please enter a valid key', true);
+    // ---------- RENDER REFERENCES ----------
+    function renderReferences() {
+      if (leafReferences.length === 0) {
+        referenceGrid.innerHTML = `
+          <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
+            <i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+            <p>No leaf references yet. Upload a leaf and click "Add to DB"</p>
+          </div>
+        `;
+        refCountEl.textContent = '0';
+        return;
       }
-    });
-    geminiApiKeyInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') saveApiKeyBtn.click();
-    });
 
-    // -------------------- STATS --------------------
-    function updateStats() {
-      refCount.textContent = leafReferences.length;
+      let html = '';
+      const uniqueNames = [...new Set(leafReferences.map(r => r.name))];
+      uniqueNames.forEach(name => {
+        const refs = leafReferences.filter(r => r.name === name);
+        const latest = refs[refs.length - 1];
+        html += `
+          <div class="reference-item">
+            <img src="${latest.imageData}" alt="${name}" onerror="this.style.display='none'">
+            <div class="name">${name}</div>
+            <div class="count">${refs.length} image${refs.length > 1 ? 's' : ''}</div>
+          </div>
+        `;
+      });
+      referenceGrid.innerHTML = html;
+      refCountEl.textContent = leafReferences.length;
     }
 
-    // -------------------- HISTORY (internal) --------------------
+    // ---------- CLEAR REFERENCES ----------
+    clearRefsBtn.addEventListener('click', function() {
+      if (!confirm('Delete ALL leaf references?')) return;
+      leafReferences = [];
+      renderReferences();
+      if (supabase && isConnected) {
+        supabase.from('leaf_references').delete().neq('id', 0).catch(() => {});
+      }
+      showToast('🗑️ References cleared');
+    });
+
+    // ---------- HISTORY ----------
     async function loadHistory() {
       if (!supabase || !isConnected) return;
       try {
-        const { data, error } = await supabase.from('scans').select('*', { count: 'exact' }).limit(1);
-        if (!error && data) {
-          historyCount.textContent = data.length || 0;
+        const { data, error } = await supabase.from('scans').select('*').order('timestamp', { ascending: false }).limit(20);
+        if (error) throw error;
+        historyList.innerHTML = '';
+        if (!data || data.length === 0) {
+          historyList.innerHTML = `<div style="text-align:center;padding:20px;color:var(--ink-faint);"><p>No scans yet</p></div>`;
+        } else {
+          data.forEach(scan => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            const date = new Date(scan.timestamp);
+            const timeStr = date.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+            const method = scan.method || 'Unknown';
+            item.innerHTML = `
+              <span class="h-plant"><i class="fas fa-seedling"></i> ${scan.plant || 'Unknown'}</span>
+              <span class="h-disease" style="background:${scan.disease && scan.disease.toLowerCase() === 'healthy' ? '#d4edda' : '#f8d7da'};color:${scan.disease && scan.disease.toLowerCase() === 'healthy' ? '#155724' : '#721c24'};">${scan.disease || 'Pending'}</span>
+              <span style="font-size:11px;color:var(--ink-faint);">${method}</span>
+              <span class="h-date"><i class="far fa-clock"></i> ${timeStr}</span>
+            `;
+            historyList.appendChild(item);
+          });
         }
-      } catch (e) {}
+        historyCountEl.textContent = `(${data ? data.length : 0})`;
+      } catch (err) {
+        console.error('History error:', err);
+      }
     }
 
-    // -------------------- SUPABASE INIT --------------------
+    refreshHistoryBtn.addEventListener('click', loadHistory);
+
+    // ---------- INIT SUPABASE ----------
     function initSupabase() {
       try {
         if (typeof window.supabase === 'undefined') {
-          setStatus('offline', 'SDK error');
+          setConnectionStatus('offline', 'SDK error');
           return;
         }
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -1256,17 +1089,18 @@
         });
         supabase.from('scans').select('id', { count: 'exact', head: true })
           .then(({ error }) => {
-            if (error) {
-              setStatus('offline', 'DB error');
+            if (error) { 
+              setConnectionStatus('offline', 'Error');
+              showToast('❌ DB error: ' + error.message, true);
               return;
             }
             isConnected = true;
-            setStatus('online', 'Ready');
+            setConnectionStatus('online', 'Connected');
             loadHistory();
             loadReferences();
           })
-          .catch(() => setStatus('offline', 'Error'));
-      } catch (e) { setStatus('offline', 'Error'); }
+          .catch(() => { setConnectionStatus('offline', 'Error'); });
+      } catch (e) { setConnectionStatus('offline', 'Error'); }
     }
 
     async function loadReferences() {
@@ -1281,18 +1115,28 @@
             timestamp: r.timestamp,
             count: r.count || 1
           }));
-          updateStats();
+          renderReferences();
         }
       } catch (e) {}
     }
 
-    // -------------------- INIT --------------------
+    // ---------- RETRY MODEL ----------
+    retryModelBtn.addEventListener('click', async function() {
+      this.disabled = true;
+      const success = await loadMobileNet();
+      this.disabled = false;
+      showToast(success ? '✅ AI model reloaded' : '⚠️ AI fallback mode', !success);
+    });
+
+    // ---------- INIT ----------
     initSupabase();
     setTimeout(loadMobileNet, 1000);
-    updateStats();
 
-    console.log('🌱 AgriScan · Smart Leaf Diagnosis');
-    console.log('🔒 Database hidden from users');
+    console.log('🌱 AgriScan Zambia with Crop Leaf Database & Gemini AI');
+    console.log('📸 Upload a leaf image to identify the crop');
+    console.log('🤖 Use "Analyze with Gemini" for AI-powered disease detection');
+    console.log('💾 Click "Add to DB" to save as reference');
+    console.log('🔑 Get your Gemini API key at: https://ai.google.dev/gemini-api');
   })();
 </script>
 </body>
