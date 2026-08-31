@@ -392,6 +392,27 @@
       </span>
       <span class="model-load" id="modelStatus" data-i18n="modelLoading">⏳ loading...</span>
     </div>
+    <button class="btn btn-sm btn-outline" id="apiKeyBtn" style="background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(212,167,44,0.5);">
+      <i class="fas fa-key"></i> <span data-i18n="btnApiKey">AI Key</span>
+    </button>
+  </div>
+</div>
+
+<div id="apiKeyBar" style="display:none;max-width:900px;margin:0 auto;padding:12px 16px 0;">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px 18px;box-shadow:var(--shadow);display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <i class="fas fa-key" style="color:var(--gold);"></i>
+    <input type="password" id="apiKeyInput" data-i18n-placeholder="apiKeyPlaceholder" placeholder="Enter your Gemini API Key (optional)" style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-family:var(--font);">
+    <button class="btn btn-sm btn-primary" id="apiKeySaveBtn"><span data-i18n="btnSave">Save</span></button>
+    <a href="https://ai.google.dev/" target="_blank" rel="noopener" style="font-size:12px;color:var(--ink-faint);">
+      <span data-i18n="apiKeyHintPrefix">Get your free key at</span> ai.google.dev
+    </a>
+  </div>
+</div>
+
+<div class="shell" style="padding-bottom:0;">
+  <div style="background:var(--gold-tint);border:1px solid var(--gold);border-radius:14px;padding:10px 16px;margin-top:16px;font-size:13px;color:var(--ink-soft);display:flex;gap:10px;align-items:flex-start;">
+    <i class="fas fa-triangle-exclamation" style="color:#a13d2a;margin-top:2px;"></i>
+    <span data-i18n="disclaimerBanner">AI results are estimates, not a lab diagnosis. For valuable crops or a spreading problem, confirm with a local agricultural extension officer before treating.</span>
   </div>
 </div>
 
@@ -467,10 +488,16 @@
     let supabase = null;
     let isConnected = false;
 
-    // ========== 🔑 GEMINI API KEY - HARDCODED ==========
-    // REPLACE THIS KEY with your own Gemini API key
-    const GEMINI_API_KEY = 'AQ.Ab8RN6K1y4aE3fvr0tJaHA-TmstBB6lLMyHF84z03lCZsrgFqA';
-    // ==================================================
+    // Gemini key is never hardcoded in source (anyone viewing the page could
+    // read it and spend your quota). Each user enters their own free key,
+    // which is saved only in their own browser's localStorage.
+    function getGeminiKey() {
+      return (localStorage.getItem('agriscan_gemini_key') || '').trim();
+    }
+    function setGeminiKey(key) {
+      if (key) localStorage.setItem('agriscan_gemini_key', key.trim());
+      else localStorage.removeItem('agriscan_gemini_key');
+    }
 
     const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
     const GEMINI_MODEL_CANDIDATES = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
@@ -538,7 +565,17 @@
         methodLocalAI: "🔬 Local AI",
         methodGeminiUnavailableSuffix: "(Gemini unavailable)",
         sourceBadgeGeminiBusy: "(Gemini busy)",
-        healthyLabel: "Healthy"
+        healthyLabel: "Healthy",
+        btnSave: "Save",
+        btnApiKey: "AI Key",
+        apiKeyPlaceholder: "Enter your Gemini API Key (optional)",
+        apiKeyHintPrefix: "Get your free key at",
+        apiKeySaved: "✅ Gemini key saved on this device",
+        apiKeyCleared: "Gemini key removed",
+        toastNoGeminiKey: "⚠️ Add a Gemini API key first (tap \"AI Key\")",
+        disclaimerBanner: "AI results are estimates, not a lab diagnosis. For valuable crops or a spreading problem, confirm with a local agricultural extension officer before treating.",
+        localAiDisclaimer: "This offline mode guesses from leaf shape and colour only — it cannot reliably detect disease. Treat it as a rough starting point, not a diagnosis.",
+        uncertainLabel: "Uncertain — image unclear"
       },
       // ---------- ICIBEMBA ----------
       bem: {
@@ -897,129 +934,105 @@
     }
 
     // ---------- GEMINI API ANALYSIS ----------
+    // Note on accuracy: Gemini is a general-purpose vision model, not one
+    // trained specifically on plant pathology datasets. It can misread
+    // similar-looking diseases or lighting/blur artifacts, so this function
+    // asks it to say so when unsure rather than forcing a confident-sounding
+    // guess, and confidence numbers below are relative signals, not
+    // guarantees.
+    function fetchWithTimeout(url, options, ms) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), ms);
+      return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    }
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
     async function analyzeWithGemini(imageData) {
-      try {
-        const base64Data = imageData.split(',')[1] || imageData;
-
-        const requestBody = {
-          contents: [
-            {
-              parts: [
-                {
-                  text: `You are an agricultural expert. Analyze this leaf image and provide a JSON response with the following fields:
-                  1. plant: The name of the plant (e.g., "Maize", "Cassava", "Groundnuts")
-                  2. disease: The disease name if detected, or "Healthy" if no disease
-                  3. confidence: Percentage confidence (0-100) in your identification
-                  4. recommendation: Brief treatment/prevention recommendation
-                  5. symptoms: Brief description of visible symptoms
-
-                  Respond ONLY with valid JSON.`
-                },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: base64Data
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            topK: 32,
-            topP: 0.95,
-            maxOutputTokens: 1024
-          }
-        };
-
-        function fetchWithTimeout(url, options, ms) {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), ms);
-          return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
-        }
-
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-        let response = null;
-        let lastError = null;
-
-        outer:
-        for (const model of GEMINI_MODEL_CANDIDATES) {
-          const url = `${GEMINI_API_BASE}${model}:generateContent?key=${GEMINI_API_KEY}`;
-          const maxAttemptsForModel = 2;
-
-          for (let attempt = 1; attempt <= maxAttemptsForModel; attempt++) {
-            try {
-              const res = await fetchWithTimeout(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-              }, 20000);
-
-              if (res.ok) {
-                response = res;
-                break outer;
-              }
-
-              const errorText = await res.text();
-              lastError = new Error(`${model} → ${res.status}: ${errorText}`);
-
-              if (res.status === 404) {
-                break;
-              }
-              if (res.status === 429 || res.status === 503) {
-                if (attempt < maxAttemptsForModel) {
-                  showToast(t('toastGeminiBusyRetry', { model }));
-                  await sleep(1500);
-                  continue;
-                }
-                break;
-              }
-              throw lastError;
-            } catch (innerErr) {
-              if (innerErr.name === 'AbortError') {
-                lastError = new Error(`${model} timed out after 20s`);
-                break;
-              }
-              if (innerErr === lastError || /404|429|503/.test(String(innerErr.message))) {
-                lastError = innerErr;
-                break;
-              }
-              throw innerErr;
-            }
-          }
-        }
-
-        if (!response) {
-          throw lastError || new Error('All Gemini model candidates failed');
-        }
-
-        const data = await response.json();
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error('No valid JSON found in response');
-        }
-
-        const parsed = JSON.parse(jsonMatch[0]);
-
-        const geminiPlantName = parsed.plant || 'Unknown';
-        return {
-          name: geminiPlantName,
-          localName: getCropLocalName(geminiPlantName),
-          disease: parsed.disease || 'Pending',
-          confidence: Math.min(100, Math.max(0, parseInt(parsed.confidence) || 70)),
-          recommendation: parsed.recommendation || 'No recommendation available',
-          symptoms: parsed.symptoms || 'No symptoms described',
-          method: 'Gemini AI',
-          leaf_type: 'Analyzed by Gemini'
-        };
-      } catch (err) {
-        console.error('Gemini API Error:', err);
-        showToast(t('toastGeminiError', { msg: err.message }), true);
+      const apiKey = getGeminiKey();
+      if (!apiKey) {
+        showToast(t('toastNoGeminiKey'), true);
         return null;
       }
+
+      const base64Data = imageData.split(',')[1] || imageData;
+      const requestBody = {
+        contents: [{
+          parts: [
+            {
+              text: `You are assisting with a rough first-pass triage of a crop leaf photo, not a lab diagnosis.
+Look carefully and respond ONLY with valid JSON, no markdown fences, with these fields:
+- plant: best-guess plant name (e.g. "Maize", "Cassava", "Groundnuts"), or "Uncertain" if you truly cannot tell
+- disease: the specific disease name if you see clear symptoms, "Healthy" if the leaf looks normal, or "Uncertain" if symptoms are ambiguous or could be more than one thing
+- confidence: your honest calibrated confidence 0-100 for the plant+disease call together. Use LOW numbers (under 40) when the image is blurry, poorly lit, cropped, or shows a disease you can't distinguish from look-alikes. Do not default to a "safe middle" number — be honest even if that means saying 20.
+- recommendation: one practical next step. If confidence is under 60, the recommendation must include getting a second opinion (photo of the other side of the leaf, better light, or a local extension officer) rather than a treatment.
+- symptoms: what you actually see in the image (spots, color, wilting, patterns), in plain language.
+
+Never invent a disease name if you are not seeing matching symptoms — say "Uncertain" instead of guessing a name just to fill the field.`
+            },
+            { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+          ]
+        }],
+        generationConfig: { temperature: 0.15, topK: 32, topP: 0.9, maxOutputTokens: 1024 }
+      };
+
+      let lastError = null;
+
+      for (const model of GEMINI_MODEL_CANDIDATES) {
+        const url = `${GEMINI_API_BASE}${model}:generateContent?key=${apiKey}`;
+        const maxAttemptsForModel = 2;
+        let triedNextModel = false;
+
+        for (let attempt = 1; attempt <= maxAttemptsForModel; attempt++) {
+          try {
+            const res = await fetchWithTimeout(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody)
+            }, 20000);
+
+            if (res.ok) {
+              const data = await res.json();
+              const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) throw new Error('Model did not return usable JSON');
+              const parsed = JSON.parse(jsonMatch[0]);
+
+              const geminiPlantName = parsed.plant || 'Uncertain';
+              const rawConfidence = Math.min(100, Math.max(0, parseInt(parsed.confidence, 10)));
+              return {
+                name: geminiPlantName,
+                localName: getCropLocalName(geminiPlantName),
+                disease: parsed.disease || 'Uncertain',
+                confidence: Number.isFinite(rawConfidence) ? rawConfidence : 30,
+                recommendation: parsed.recommendation || 'Consult a local agricultural extension officer.',
+                symptoms: parsed.symptoms || '',
+                method: 'Gemini AI',
+                leaf_type: 'Analyzed by Gemini'
+              };
+            }
+
+            const errorText = await res.text();
+            lastError = new Error(`${model} → ${res.status}: ${errorText}`);
+            if (res.status === 404) { triedNextModel = true; break; } // model not available, try next
+            if ((res.status === 429 || res.status === 503) && attempt < maxAttemptsForModel) {
+              showToast(t('toastGeminiBusyRetry', { model }));
+              await sleep(1500);
+              continue;
+            }
+            triedNextModel = true;
+            break;
+          } catch (innerErr) {
+            lastError = innerErr.name === 'AbortError' ? new Error(`${model} timed out after 20s`) : innerErr;
+            triedNextModel = true;
+            break;
+          }
+        }
+        if (!triedNextModel) break;
+      }
+
+      console.error('Gemini API Error:', lastError);
+      showToast(t('toastGeminiError', { msg: lastError ? lastError.message : 'unknown error' }), true);
+      return null;
     }
 
     // ---------- IDENTIFY LEAF (Local AI + Database) ----------
@@ -1032,14 +1045,18 @@
             for (const crop of CROP_DATABASE) {
               if (topClass.includes(crop.name.toLowerCase()) ||
                   crop.aliases.some(a => topClass.includes(a))) {
+                // MobileNet is trained on general ImageNet categories, not
+                // crop diseases — it can only ever hint at the plant type.
+                // It has no basis to name a specific disease, so we don't
+                // fabricate one here.
                 return {
                   name: crop.name,
                   localName: getCropLocalName(crop.name),
                   confidence: Math.round(predictions[0].probability * 100),
-                  method: 'AI Classification',
+                  method: 'AI Classification (plant type only)',
                   leaf_type: crop.leaf_type,
-                  disease: crop.diseases?.[0] || 'Pending',
-                  recommendation: `Monitor for ${crop.diseases?.[0] || 'common pests'}`
+                  disease: 'Uncertain',
+                  recommendation: 'Plant type detected only — this mode cannot assess disease. Use "Analyze" (Gemini) for a disease read, or consult a local expert.'
                 };
               }
             }
@@ -1071,16 +1088,21 @@
           } catch (e) {}
         }
 
-        if (bestMatch && bestSimilarity > 0.3) {
+        if (bestMatch && bestSimilarity > 0.5) {
+          // This is a crude pixel/color similarity to whatever reference
+          // photos happen to be in the shared database — those references
+          // are user-submitted and not verified, so this is closer to
+          // "looks similar to a photo someone else uploaded" than a
+          // real disease match. Confidence is capped accordingly.
           return {
             name: bestMatch.name,
             localName: getCropLocalName(bestMatch.name),
-            confidence: Math.round(bestSimilarity * 100),
-            method: 'Database Match',
-            leaf_type: 'Matched from database',
+            confidence: Math.round(Math.min(65, bestSimilarity * 100)),
+            method: 'Similar Reference Photo',
+            leaf_type: 'Matched from shared photo database',
             matchCount: bestMatch.count || 1,
-            disease: 'Pending',
-            recommendation: 'Add disease info manually'
+            disease: 'Uncertain',
+            recommendation: 'This is a visual similarity match, not a disease diagnosis — use "Analyze" (Gemini) or ask a local expert.'
           };
         }
       }
@@ -1132,15 +1154,18 @@
         }
       }
 
+      // This branch only measures leaf silhouette shape and average color —
+      // it has no way to see disease symptoms at all, so it must never be
+      // shown as a confident result. Confidence is capped low on purpose.
       return {
         name: bestCrop.name,
         localName: getCropLocalName(bestCrop.name),
-        confidence: Math.round(Math.min(95, 60 + bestScore * 40)),
-        method: 'Leaf Analysis',
+        confidence: Math.round(Math.min(40, 15 + bestScore * 20)),
+        method: 'Rough Shape/Color Guess',
         leaf_type: bestCrop.leaf_type,
         matchCount: 0,
-        disease: 'Pending',
-        recommendation: 'Please consult a local agricultural expert'
+        disease: 'Uncertain',
+        recommendation: t('localAiDisclaimer')
       };
     }
 
@@ -1166,6 +1191,20 @@
     const refCountEl = document.getElementById('refCount');
     const analysisMethod = document.getElementById('analysisMethod');
     const langSelect = document.getElementById('langSelect');
+    const apiKeyBtn = document.getElementById('apiKeyBtn');
+    const apiKeyBar = document.getElementById('apiKeyBar');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const apiKeySaveBtn = document.getElementById('apiKeySaveBtn');
+
+    apiKeyInput.value = getGeminiKey();
+    apiKeyBtn.addEventListener('click', () => {
+      apiKeyBar.style.display = apiKeyBar.style.display === 'none' ? 'block' : 'none';
+    });
+    apiKeySaveBtn.addEventListener('click', () => {
+      setGeminiKey(apiKeyInput.value);
+      showToast(apiKeyInput.value.trim() ? t('apiKeySaved') : t('apiKeyCleared'));
+      apiKeyBar.style.display = 'none';
+    });
 
     let cameraStream = null;
     let isCameraActive = false;
@@ -1343,8 +1382,9 @@
           } catch (e) {}
         }
 
-        const diseaseColor = result.disease && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
-        const diseaseLabel = result.disease && result.disease.toLowerCase() === 'healthy' ? t('healthyLabel') : (result.disease || t('healthyLabel'));
+        const diseaseLower = (result.disease || '').toLowerCase();
+        const diseaseColor = diseaseLower === 'healthy' ? '#2b7a3e' : (diseaseLower === 'uncertain' ? '#8a7a3b' : '#a13d2a');
+        const diseaseLabel = diseaseLower === 'healthy' ? t('healthyLabel') : (diseaseLower === 'uncertain' ? t('uncertainLabel') : (result.disease || t('healthyLabel')));
         const sourceBadge = usedLocalFallback
           ? `<i class="fas fa-microscope"></i> ${result.method} ${t('sourceBadgeGeminiBusy')}`
           : `<i class="fab fa-google"></i> Gemini AI`;
@@ -1408,8 +1448,9 @@
           } catch (e) {}
         }
 
-        const diseaseColor = result.disease && result.disease.toLowerCase() !== 'pending' && result.disease.toLowerCase() !== 'healthy' ? '#a13d2a' : '#2b7a3e';
-        const diseaseLabel = (!result.disease || result.disease.toLowerCase() === 'pending' || result.disease.toLowerCase() === 'healthy') ? t('healthyLabel') : result.disease;
+        const diseaseLowerLocal = (result.disease || '').toLowerCase();
+        const diseaseColor = diseaseLowerLocal === 'healthy' ? '#2b7a3e' : (diseaseLowerLocal === 'uncertain' || diseaseLowerLocal === 'pending' ? '#8a7a3b' : '#a13d2a');
+        const diseaseLabel = diseaseLowerLocal === 'healthy' ? t('healthyLabel') : (diseaseLowerLocal === 'uncertain' || diseaseLowerLocal === 'pending' ? t('uncertainLabel') : result.disease);
         const plantDisplay = (result.localName && result.localName !== result.name)
           ? `${result.localName} <span style="font-size:13px;font-weight:500;color:var(--ink-faint);">(${result.name})</span>`
           : result.name;
@@ -1493,7 +1534,7 @@
 
     console.log('🌱 AgriScan · Smart Leaf Diagnosis');
     console.log('📸 Upload a leaf image to identify your crop');
-    console.log('🔑 Gemini API key is pre-configured');
+    console.log('🔑 Add your own free Gemini API key via the "AI Key" button');
     console.log('🌍 Languages: English, Icibemba, Chinyanja, Chitonga, Silozi');
   })();
 </script>
