@@ -3,11 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>AgriScan Zambia · Crop Identification</title>
+  <title>AgriScan Zambia · Leaf Identification</title>
   <meta name="theme-color" content="#1e3c2c">
-  <!-- TensorFlow.js + MobileNet -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
   <style>
@@ -54,10 +51,10 @@
     .upload-zone h3 { font-family: var(--font-display); font-weight: 450; color: var(--primary); }
     .upload-zone p { color: var(--ink-faint); font-size: 14px; }
     .file-input { display: none; }
-    .preview-box { margin-top: 18px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.04); position: relative; }
+    .preview-box { margin-top: 18px; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
     .preview-box img { width: 100%; max-height: 350px; object-fit: contain; background: #f0f5eb; display: block; }
     .result-panel { background: var(--gold-tint); border-radius: 16px; padding: 16px 20px; margin-top: 12px; border-left: 6px solid var(--gold); }
-    .result-panel .plant-name { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .result-panel .plant-name { font-size: 24px; font-weight: 700; color: var(--primary); }
     .result-panel .disease-tag { display: inline-block; padding: 4px 16px; border-radius: 40px; font-size: 13px; font-weight: 600; margin-top: 4px; }
     .result-panel .confidence { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
     .result-panel .confidence span { font-weight: 700; color: var(--primary); }
@@ -77,8 +74,6 @@
     .btn-danger:hover { background: #7f2f1f; }
     .btn-success { background: #2b7a3e; color: #fff; }
     .btn-success:hover { background: #1f6b3a; }
-    .btn-warning { background: #d4a72c; color: #1e2c1e; }
-    .btn-warning:hover { background: #b88f20; }
     .btn-camera { background: linear-gradient(135deg, #2b5a3e, #1e3c2c); color: #fff; border: 2px solid var(--gold); }
     .btn-camera:hover { background: linear-gradient(135deg, #1e3c2c, #143022); }
     .toast {
@@ -91,9 +86,6 @@
     .toast i { color: var(--gold); }
     .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .db-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-    .db-stat-item { background: var(--surface); padding: 6px 16px; border-radius: 40px; border: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
-    .db-stat-item strong { color: var(--primary); }
     .connection-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #d4e8d0; }
     .connection-status .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .connection-status .dot.online { background: #7bc96a; }
@@ -106,18 +98,16 @@
     #cameraVideo { width: 100%; max-height: 350px; border-radius: 16px; background: #1a1a1a; display: none; }
     .camera-controls { display: none; gap: 10px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
     .camera-controls .btn { min-width: 120px; justify-content: center; }
+    .confidence-bar { width: 100%; height: 8px; background: #eef4ea; border-radius: 10px; overflow: hidden; margin-top: 6px; }
+    .confidence-bar .fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
     .reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
-    .reference-item { background: var(--surface); border-radius: 12px; padding: 8px; border: 2px solid var(--border); text-align: center; transition: 0.15s; }
-    .reference-item:hover { border-color: var(--gold); }
+    .reference-item { background: var(--surface); border-radius: 12px; padding: 8px; border: 2px solid var(--border); text-align: center; }
     .reference-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
     .reference-item .name { font-size: 11px; font-weight: 600; color: var(--primary); margin-top: 4px; }
     .reference-item .count { font-size: 10px; color: var(--ink-faint); }
-    .crop-selector { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
-    .crop-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 11px; transition: 0.15s; }
-    .crop-btn:hover { background: var(--gold-tint); border-color: var(--gold); }
-    .crop-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-    .confidence-bar { width: 100%; height: 8px; background: #eef4ea; border-radius: 10px; overflow: hidden; margin-top: 6px; }
-    .confidence-bar .fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+    .db-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+    .db-stat-item { background: var(--surface); padding: 6px 16px; border-radius: 40px; border: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
+    .db-stat-item strong { color: var(--primary); }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
@@ -129,7 +119,7 @@
     <div class="icon-leaf"><i class="fas fa-leaf"></i></div>
     <div>
       <h1>AgriScan Zambia</h1>
-      <div class="tagline"><i class="fas fa-database"></i> SMART LEAF DIAGNOSIS</div>
+      <div class="tagline"><i class="fas fa-database"></i> Smart Leaf Diagnosis</div>
     </div>
   </div>
   <div class="status-badge" id="dbStatus">
@@ -137,7 +127,7 @@
       <span class="dot connecting" id="statusDot"></span>
       <span id="statusText">Connecting...</span>
     </span>
-    <span class="model-load" id="modelStatus">⏳ loading...</span>
+    <span class="model-load" id="modelStatus">📊 Database Mode</span>
   </div>
 </div>
 
@@ -145,7 +135,7 @@
   <div class="card">
     <div class="card-header">
       <h2><i class="fas fa-seedling"></i> Identify Your Crop <span class="zambia-flag">🇿🇲</span></h2>
-      <span class="badge-ai"><i class="fas fa-brain"></i> Image Matching</span>
+      <span class="badge-ai"><i class="fas fa-database"></i> Image Matching</span>
     </div>
     <div class="grid-2">
       <div>
@@ -166,7 +156,6 @@
         <div class="action-buttons">
           <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> Camera</button>
           <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Identify</button>
-          <button class="btn btn-success" id="saveRefBtn"><i class="fas fa-save"></i> Save Reference</button>
           <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
         </div>
       </div>
@@ -177,7 +166,6 @@
               <i class="fas fa-robot" style="color:var(--gold);font-size:20px;"></i>
               <span style="font-weight:600;color:var(--primary);">Diagnosis</span>
             </div>
-            <button class="btn btn-sm btn-warning" id="retryModelBtn"><i class="fas fa-sync-alt"></i> Reload AI</button>
           </div>
           <div id="resultContent">
             <p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>
@@ -196,12 +184,12 @@
   <div class="card">
     <div class="card-header">
       <h2><i class="fas fa-database"></i> Leaf Reference Database</h2>
-      <button class="btn btn-sm btn-danger" id="clearRefsBtn"><i class="fas fa-trash"></i> Clear All</button>
+      <span style="font-size:12px;color:var(--ink-faint);">Crops available for matching</span>
     </div>
     <div id="referenceGrid" class="reference-grid">
       <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
-        <i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-        <p>No leaf references yet. Upload a leaf and click "Save Reference"</p>
+        <i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+        <p>Loading references from database...</p>
       </div>
     </div>
   </div>
@@ -221,299 +209,11 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluanZwYmFoZnFsdG96cnNxY21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MDM0MzIsImV4cCI6MjEwMzQ3OTQzMn0.JoGibO2fqrw7sbmBbQ55EUKONQl94cqPTmkqxNoiXXk';
     let supabase = null;
     let isConnected = false;
-
-    // ---------- CROP DATABASE WITH LEAF CHARACTERISTICS ----------
-    const ZAMBIAN_CROPS = [
-      { name: "Maize", keywords: ["maize", "corn", "mealie", "zea mays"], leafShape: "long, broad, parallel veins", colorHint: "bright green" },
-      { name: "Cassava", keywords: ["cassava", "manioc", "yuca", "manihot"], leafShape: "palmate, finger-like lobes", colorHint: "medium green" },
-      { name: "Groundnuts", keywords: ["groundnut", "peanut", "arachis", "goober"], leafShape: "small, oval, paired leaflets", colorHint: "dark green" },
-      { name: "Soybeans", keywords: ["soybean", "soya", "glycine"], leafShape: "trifoliate, oval leaflets", colorHint: "medium green" },
-      { name: "Pumpkin", keywords: ["pumpkin", "squash", "calabash", "cucurbita"], leafShape: "large, round, lobed", colorHint: "dark green" },
-      { name: "Sweet Potato", keywords: ["sweet potato", "ipomoea", "yam"], leafShape: "heart-shaped or lobed", colorHint: "medium green" },
-      { name: "Sorghum", keywords: ["sorghum", "milo", "durra", "sorghum bicolor"], leafShape: "long, narrow, pointed", colorHint: "light green" },
-      { name: "Cotton", keywords: ["cotton", "gossypium", "lint"], leafShape: "palmate, 3-5 lobes", colorHint: "medium green" },
-      { name: "Sunflower", keywords: ["sunflower", "helianthus"], leafShape: "broad, heart-shaped, rough", colorHint: "dark green" },
-      { name: "Cowpea", keywords: ["cowpea", "black-eyed pea", "vigna"], leafShape: "trifoliate, oval leaflets", colorHint: "medium green" },
-      { name: "Millet", keywords: ["millet", "finger millet", "eleusine", "rapoko"], leafShape: "long, narrow, pointed", colorHint: "light green" },
-      { name: "Rice", keywords: ["rice", "paddy", "oryza"], leafShape: "long, narrow, pointed", colorHint: "light green" },
-      { name: "Wheat", keywords: ["wheat", "triticum"], leafShape: "long, narrow, pointed", colorHint: "light green" },
-    ];
-
-    // ---------- LEAF REFERENCE STORAGE ----------
     let leafReferences = [];
     let currentImageData = null;
     let currentImageElement = null;
-    let lastResult = null;
 
-    // ---------- MOBILENET ----------
-    let mobilenetModel = null;
-    let modelReady = false;
-    let modelLoading = false;
-
-    // ---------- IMAGE FEATURE EXTRACTION ----------
-    function extractFeatures(imageElement) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      canvas.width = 64;
-      canvas.height = 64;
-      ctx.drawImage(imageElement, 0, 0, 64, 64);
-      const imageData = ctx.getImageData(0, 0, 64, 64);
-      const data = imageData.data;
-      
-      // Color averages
-      let r = 0, g = 0, b = 0;
-      let count = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i+1];
-        b += data[i+2];
-        count++;
-      }
-      r /= count;
-      g /= count;
-      b /= count;
-      
-      // Brightness and contrast
-      let brightness = (r + g + b) / 3;
-      let variance = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        const avg = (data[i] + data[i+1] + data[i+2]) / 3;
-        variance += Math.pow(avg - brightness, 2);
-      }
-      variance /= count;
-      const contrast = Math.sqrt(variance);
-      
-      // Edge detection
-      let edgeStrength = 0;
-      for (let y = 1; y < 63; y++) {
-        for (let x = 1; x < 63; x++) {
-          const idx = (y * 64 + x) * 4;
-          const idxL = (y * 64 + (x-1)) * 4;
-          const idxR = (y * 64 + (x+1)) * 4;
-          const idxU = ((y-1) * 64 + x) * 4;
-          const idxD = ((y+1) * 64 + x) * 4;
-          const gx = (data[idxR] + data[idxR+1] + data[idxR+2]) - (data[idxL] + data[idxL+1] + data[idxL+2]);
-          const gy = (data[idxD] + data[idxD+1] + data[idxD+2]) - (data[idxU] + data[idxU+1] + data[idxU+2]);
-          edgeStrength += Math.sqrt(gx*gx + gy*gy) / 255;
-        }
-      }
-      edgeStrength /= (62 * 62);
-      
-      // Green dominance (important for plants)
-      const greenDominance = g / (r + g + b + 1);
-      
-      // Perceptual hash
-      let hash = '';
-      let avg = 0;
-      const gray = [];
-      for (let i = 0; i < data.length; i += 4) {
-        const gv = (data[i] + data[i+1] + data[i+2]) / 3;
-        gray.push(gv);
-        avg += gv;
-      }
-      avg /= gray.length;
-      for (let i = 0; i < gray.length; i++) {
-        hash += gray[i] > avg ? '1' : '0';
-      }
-      
-      return {
-        r, g, b,
-        brightness,
-        contrast,
-        edgeStrength,
-        greenDominance,
-        hash,
-        aspectRatio: imageElement.naturalWidth / imageElement.naturalHeight
-      };
-    }
-
-    function hashDistance(hash1, hash2) {
-      let diff = 0;
-      const len = Math.min(hash1.length, hash2.length);
-      for (let i = 0; i < len; i++) {
-        if (hash1[i] !== hash2[i]) diff++;
-      }
-      return diff / len;
-    }
-
-    function compareFeatures(f1, f2) {
-      const colorDiff = (Math.abs(f1.r - f2.r) + Math.abs(f1.g - f2.g) + Math.abs(f1.b - f2.b)) / 765;
-      const brightDiff = Math.abs(f1.brightness - f2.brightness) / 255;
-      const contrastDiff = Math.abs(f1.contrast - f2.contrast) / 255;
-      const edgeDiff = Math.abs(f1.edgeStrength - f2.edgeStrength);
-      const hashDiff = hashDistance(f1.hash, f2.hash);
-      const aspectDiff = Math.abs(f1.aspectRatio - f2.aspectRatio) / 5;
-      const greenDiff = Math.abs(f1.greenDominance - f2.greenDominance);
-      
-      const totalDiff = (
-        colorDiff * 0.20 +
-        brightDiff * 0.10 +
-        contrastDiff * 0.10 +
-        edgeDiff * 0.15 +
-        hashDiff * 0.25 +
-        aspectDiff * 0.10 +
-        greenDiff * 0.10
-      );
-      
-      return Math.max(0, 1 - Math.min(1, totalDiff));
-    }
-
-    // ---------- IDENTIFICATION ENGINE ----------
-    async function identifyLeaf(imageElement) {
-      const features = extractFeatures(imageElement);
-      console.log('Features:', features);
-      
-      let bestMatch = null;
-      let bestScore = 0;
-      let matchMethod = 'Shape Analysis';
-      let matchDetails = [];
-      
-      // Step 1: Try AI if available
-      if (modelReady && mobilenetModel) {
-        try {
-          const predictions = await mobilenetModel.classify(imageElement);
-          console.log('AI Predictions:', predictions);
-          if (predictions && predictions.length > 0) {
-            const topClass = predictions[0].className.toLowerCase();
-            const conf = predictions[0].probability * 100;
-            
-            for (const crop of ZAMBIAN_CROPS) {
-              for (const keyword of crop.keywords) {
-                if (topClass.includes(keyword) || keyword.includes(topClass)) {
-                  return {
-                    name: crop.name,
-                    confidence: Math.round(conf),
-                    method: 'AI Classification',
-                    leafShape: crop.leafShape,
-                    details: [`AI matched "${topClass}"`]
-                  };
-                }
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('AI failed:', err);
-        }
-      }
-      
-      // Step 2: Compare with database references
-      if (leafReferences.length > 0) {
-        for (const ref of leafReferences) {
-          try {
-            const refImg = new Image();
-            refImg.src = ref.image_data || ref.imageData;
-            await new Promise((resolve) => {
-              refImg.onload = resolve;
-              refImg.onerror = () => resolve();
-            });
-            
-            if (refImg.complete && refImg.naturalWidth > 0) {
-              const refFeatures = extractFeatures(refImg);
-              const similarity = compareFeatures(features, refFeatures);
-              
-              if (similarity > bestScore) {
-                bestScore = similarity;
-                bestMatch = ref;
-              }
-            }
-          } catch (e) {}
-        }
-        
-        if (bestMatch && bestScore > 0.35) {
-          return {
-            name: bestMatch.crop_name || bestMatch.name,
-            confidence: Math.round(Math.min(95, bestScore * 100)),
-            method: 'Database Match',
-            details: [`Matched ${Math.round(bestScore * 100)}% similarity with stored reference`],
-            matchCount: bestMatch.count || 1
-          };
-        }
-      }
-      
-      // Step 3: Leaf characteristic analysis
-      const greenScore = features.greenDominance;
-      const aspectRatio = features.aspectRatio;
-      const brightness = features.brightness;
-      
-      let scores = {};
-      for (const crop of ZAMBIAN_CROPS) {
-        let score = 0;
-        
-        // Green color analysis
-        if (greenScore > 0.4) score += 20;
-        if (greenScore > 0.5) score += 20;
-        
-        // Shape analysis based on aspect ratio
-        if (crop.leafShape.includes('long') && aspectRatio > 1.8) score += 25;
-        if (crop.leafShape.includes('broad') && aspectRatio < 1.3) score += 25;
-        if (crop.leafShape.includes('heart') && aspectRatio < 1.2) score += 20;
-        if (crop.leafShape.includes('oval') && aspectRatio < 1.5) score += 20;
-        if (crop.leafShape.includes('palmate')) score += 20;
-        if (crop.leafShape.includes('lobed')) score += 20;
-        if (crop.leafShape.includes('trifoliate')) score += 20;
-        
-        // Color hints
-        if (crop.colorHint && crop.colorHint.includes('bright') && brightness > 130) score += 10;
-        if (crop.colorHint && crop.colorHint.includes('dark') && brightness < 100) score += 10;
-        if (crop.colorHint && crop.colorHint.includes('light') && brightness > 140) score += 10;
-        
-        scores[crop.name] = score;
-      }
-      
-      // Find best match
-      let bestCrop = ZAMBIAN_CROPS[0];
-      let bestCropScore = 0;
-      for (const [name, score] of Object.entries(scores)) {
-        if (score > bestCropScore) {
-          bestCropScore = score;
-          bestCrop = ZAMBIAN_CROPS.find(c => c.name === name);
-        }
-      }
-      
-      // Calculate confidence based on score (max possible ~100)
-      const confidence = Math.min(85, Math.round(50 + bestCropScore * 0.35));
-      
-      return {
-        name: bestCrop.name,
-        confidence: confidence,
-        method: 'Shape Analysis',
-        leafShape: bestCrop.leafShape,
-        details: [
-          `Green score: ${Math.round(greenScore * 100)}%`,
-          `Aspect ratio: ${aspectRatio.toFixed(2)}`,
-          `Brightness: ${Math.round(brightness)}`
-        ]
-      };
-    }
-
-    // ---------- LOAD MOBILENET ----------
-    async function loadMobileNet() {
-      const statusEl = document.getElementById('modelStatus');
-      if (modelLoading) return false;
-      modelLoading = true;
-      statusEl.textContent = '⏳ loading AI...';
-      
-      try {
-        const loadPromise = mobilenet.load({ version: 2, alpha: 1.0 });
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 30000)
-        );
-        mobilenetModel = await Promise.race([loadPromise, timeoutPromise]);
-        modelReady = true;
-        modelLoading = false;
-        statusEl.textContent = '✅ AI ready';
-        showToast('🧠 AI model loaded');
-        return true;
-      } catch (err) {
-        modelLoading = false;
-        statusEl.textContent = '📊 DB mode';
-        showToast('📊 Using database matching mode', false);
-        return false;
-      }
-    }
-
-    // ---------- UI ----------
+    // ---------- UI Elements ----------
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const uploadZone = document.getElementById('uploadZone');
@@ -525,13 +225,10 @@
     const cameraBtn = document.getElementById('cameraBtn');
     const captureBtn = document.getElementById('captureBtn');
     const stopCameraBtn = document.getElementById('stopCameraBtn');
-    const saveRefBtn = document.getElementById('saveRefBtn');
-    const retryModelBtn = document.getElementById('retryModelBtn');
     const cameraVideo = document.getElementById('cameraVideo');
     const cameraControls = document.getElementById('cameraControls');
     const resultContent = document.getElementById('resultContent');
     const referenceGrid = document.getElementById('referenceGrid');
-    const clearRefsBtn = document.getElementById('clearRefsBtn');
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMsg');
     const refCountEl = document.getElementById('refCount');
@@ -653,7 +350,6 @@
       if (isCameraActive) stopCamera();
       currentImageData = null;
       currentImageElement = null;
-      lastResult = null;
       fileInput.value = '';
       previewContainer.style.display = 'none';
       previewImage.src = '#';
@@ -664,21 +360,167 @@
       showToast('Cleared');
     });
 
+    // ---------- IMAGE FEATURE EXTRACTION ----------
+    function extractFeatures(imageElement) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 64;
+      canvas.height = 64;
+      ctx.drawImage(imageElement, 0, 0, 64, 64);
+      const imageData = ctx.getImageData(0, 0, 64, 64);
+      const data = imageData.data;
+      
+      let r = 0, g = 0, b = 0;
+      let count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i+1];
+        b += data[i+2];
+        count++;
+      }
+      r /= count;
+      g /= count;
+      b /= count;
+      
+      let brightness = (r + g + b) / 3;
+      let variance = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+        variance += Math.pow(avg - brightness, 2);
+      }
+      variance /= count;
+      const contrast = Math.sqrt(variance);
+      
+      let edgeStrength = 0;
+      for (let y = 1; y < 63; y++) {
+        for (let x = 1; x < 63; x++) {
+          const idx = (y * 64 + x) * 4;
+          const idxL = (y * 64 + (x-1)) * 4;
+          const idxR = (y * 64 + (x+1)) * 4;
+          const idxU = ((y-1) * 64 + x) * 4;
+          const idxD = ((y+1) * 64 + x) * 4;
+          const gx = (data[idxR] + data[idxR+1] + data[idxR+2]) - (data[idxL] + data[idxL+1] + data[idxL+2]);
+          const gy = (data[idxD] + data[idxD+1] + data[idxD+2]) - (data[idxU] + data[idxU+1] + data[idxU+2]);
+          edgeStrength += Math.sqrt(gx*gx + gy*gy) / 255;
+        }
+      }
+      edgeStrength /= (62 * 62);
+      
+      const greenDominance = g / (r + g + b + 1);
+      
+      let hash = '';
+      let avg = 0;
+      const gray = [];
+      for (let i = 0; i < data.length; i += 4) {
+        const gv = (data[i] + data[i+1] + data[i+2]) / 3;
+        gray.push(gv);
+        avg += gv;
+      }
+      avg /= gray.length;
+      for (let i = 0; i < gray.length; i++) {
+        hash += gray[i] > avg ? '1' : '0';
+      }
+      
+      return {
+        r, g, b, brightness, contrast, edgeStrength, greenDominance,
+        hash, aspectRatio: imageElement.naturalWidth / imageElement.naturalHeight
+      };
+    }
+
+    function hashDistance(hash1, hash2) {
+      let diff = 0;
+      const len = Math.min(hash1.length, hash2.length);
+      for (let i = 0; i < len; i++) {
+        if (hash1[i] !== hash2[i]) diff++;
+      }
+      return diff / len;
+    }
+
+    function compareFeatures(f1, f2) {
+      const colorDiff = (Math.abs(f1.r - f2.r) + Math.abs(f1.g - f2.g) + Math.abs(f1.b - f2.b)) / 765;
+      const brightDiff = Math.abs(f1.brightness - f2.brightness) / 255;
+      const contrastDiff = Math.abs(f1.contrast - f2.contrast) / 255;
+      const edgeDiff = Math.abs(f1.edgeStrength - f2.edgeStrength);
+      const hashDiff = hashDistance(f1.hash, f2.hash);
+      const aspectDiff = Math.abs(f1.aspectRatio - f2.aspectRatio) / 5;
+      const greenDiff = Math.abs(f1.greenDominance - f2.greenDominance);
+      
+      const totalDiff = (colorDiff * 0.20 + brightDiff * 0.10 + contrastDiff * 0.10 + edgeDiff * 0.15 + hashDiff * 0.25 + aspectDiff * 0.10 + greenDiff * 0.10);
+      return Math.max(0, 1 - Math.min(1, totalDiff));
+    }
+
+    // ---------- IDENTIFICATION ----------
+    async function identifyLeaf(imageElement) {
+      const features = extractFeatures(imageElement);
+      
+      if (leafReferences.length === 0) {
+        return {
+          name: "No references",
+          confidence: 0,
+          method: "No database",
+          details: ["Add crop references to the database first"]
+        };
+      }
+      
+      let bestMatch = null;
+      let bestScore = 0;
+      
+      for (const ref of leafReferences) {
+        try {
+          const refImg = new Image();
+          refImg.src = ref.image_data;
+          await new Promise((resolve) => {
+            refImg.onload = resolve;
+            refImg.onerror = () => resolve();
+          });
+          
+          if (refImg.complete && refImg.naturalWidth > 0) {
+            const refFeatures = extractFeatures(refImg);
+            const similarity = compareFeatures(features, refFeatures);
+            
+            if (similarity > bestScore) {
+              bestScore = similarity;
+              bestMatch = ref;
+            }
+          }
+        } catch (e) {}
+      }
+      
+      if (bestMatch && bestScore > 0.25) {
+        return {
+          name: bestMatch.crop_name,
+          confidence: Math.round(Math.min(95, bestScore * 100)),
+          method: 'Database Match',
+          details: [`${Math.round(bestScore * 100)}% similarity with stored reference`]
+        };
+      }
+      
+      return {
+        name: "Unknown",
+        confidence: 0,
+        method: "No match",
+        details: ["No matching crop found. Try a clearer photo."]
+      };
+    }
+
     // ---------- ANALYZE ----------
     analyzeBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload or capture an image first', true);
+        showToast('⚠️ Please upload an image first', true);
+        return;
+      }
+      if (leafReferences.length === 0) {
+        showToast('⚠️ No crop references in database. Add some first.', true);
         return;
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf shape...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">Comparing with database...</span>
       </div>`;
       analyzeBtn.disabled = true;
 
       try {
         const result = await identifyLeaf(currentImageElement);
-        lastResult = result;
         
         const color = result.confidence > 60 ? '#2b7a3e' : '#d4a72c';
         const barColor = result.confidence > 60 ? '#2b7a3e' : '#d4a72c';
@@ -696,19 +538,14 @@
             </div>
             <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span style="color:${barColor};font-weight:700;">${result.confidence}%</span></div>
             <div class="confidence-bar"><div class="fill" style="width:${result.confidence}%;background:${barColor};"></div></div>
-            ${result.leafShape ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-info-circle"></i> Leaf type: ${result.leafShape}</div>` : ''}
-            ${result.matchCount ? `<div style="font-size:13px;color:var(--ink-soft);"><i class="fas fa-database"></i> Based on ${result.matchCount} reference images</div>` : ''}
             <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);font-size:13px;">
               <i class="fas fa-lightbulb" style="color:var(--gold);"></i> 
               ${result.confidence > 60 ? 
-                `This leaf appears to be <strong>${result.name}</strong>. ${detailsHtml}` :
-                `Low confidence match. Try taking another photo with better lighting and a clear view of the leaf.`
+                `This leaf matches <strong>${result.name}</strong> in the database. ${detailsHtml}` :
+                result.name === "Unknown" ?
+                `No matching crop found. Try taking a clearer photo with good lighting.` :
+                `Low confidence match. Try taking another photo with better lighting.`
               }
-            </div>
-            <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
-              <span style="font-size:12px;color:var(--ink-faint);">Is this correct?</span>
-              <button class="btn btn-sm btn-success" onclick="confirmCrop('${result.name}')"><i class="fas fa-check"></i> Yes</button>
-              <button class="btn btn-sm btn-warning" onclick="showCropSelector()"><i class="fas fa-edit"></i> No, select correct</button>
             </div>
             <div style="margin-top:4px;font-size:11px;color:var(--ink-faint);display:flex;gap:6px;flex-wrap:wrap;">
               ${detailsHtml}
@@ -716,7 +553,11 @@
           </div>
         `;
         
-        showToast(`✅ Identified: ${result.name} (${result.confidence}%)`);
+        if (result.confidence > 60) {
+          showToast(`✅ Identified: ${result.name} (${result.confidence}%)`);
+        } else {
+          showToast(`⚠️ Low confidence match: ${result.name} (${result.confidence}%)`, true);
+        }
       } catch (err) {
         showToast('❌ Error: ' + err.message, true);
         console.error(err);
@@ -725,132 +566,7 @@
       }
     });
 
-    // ---------- CROP CONFIRMATION ----------
-    window.confirmCrop = function(name) {
-      if (lastResult) {
-        lastResult.name = name;
-        lastResult.confidence = 90;
-        lastResult.method = 'Manual Confirmation';
-        showToast(`✅ Confirmed: ${name}`);
-        analyzeBtn.click();
-      }
-    };
-
-    window.showCropSelector = function() {
-      let html = '<div style="margin-top:8px;"><p style="font-weight:600;font-size:14px;">Select correct crop:</p><div class="crop-selector">';
-      ZAMBIAN_CROPS.forEach(crop => {
-        html += `<button class="crop-btn" onclick="selectCrop('${crop.name}')">${crop.name}</button>`;
-      });
-      html += '</div></div>';
-      resultContent.innerHTML += html;
-    };
-
-    window.selectCrop = function(name) {
-      if (lastResult) {
-        lastResult.name = name;
-        lastResult.confidence = 95;
-        lastResult.method = 'Manual Selection';
-        showToast(`✅ Selected: ${name}`);
-        analyzeBtn.click();
-      }
-    };
-
-    // ---------- SAVE REFERENCE ----------
-    saveRefBtn.addEventListener('click', async function() {
-      if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload or capture an image first', true);
-        return;
-      }
-      
-      const cropName = prompt('Enter the correct crop name:', lastResult ? lastResult.name : '');
-      if (!cropName) {
-        showToast('⚠️ Canceled. Enter a crop name to save.', true);
-        return;
-      }
-
-      // Check if this crop already exists
-      const existingIndex = leafReferences.findIndex(r => (r.crop_name || r.name) === cropName);
-      
-      if (existingIndex >= 0) {
-        leafReferences[existingIndex].image_data = currentImageData;
-        leafReferences[existingIndex].timestamp = Date.now();
-        leafReferences[existingIndex].count = (leafReferences[existingIndex].count || 1) + 1;
-        showToast(`✅ Updated ${cropName} reference (${leafReferences[existingIndex].count} images)`);
-      } else {
-        leafReferences.push({
-          id: Date.now(),
-          crop_name: cropName,
-          image_data: currentImageData,
-          timestamp: Date.now(),
-          count: 1
-        });
-        showToast(`✅ Added ${cropName} to database`);
-      }
-
-      if (supabase && isConnected) {
-        try {
-          await supabase.from('crop_references').upsert([{
-            crop_name: cropName,
-            image_data: currentImageData,
-            timestamp: Date.now(),
-            count: existingIndex >= 0 ? (leafReferences[existingIndex].count || 1) : 1
-          }]);
-        } catch (e) {
-          console.warn('Supabase save error:', e);
-        }
-      }
-
-      renderReferences();
-    });
-
-    // ---------- RENDER REFERENCES ----------
-    function renderReferences() {
-      if (leafReferences.length === 0) {
-        referenceGrid.innerHTML = `
-          <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
-            <i class="fas fa-leaf" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-            <p>No leaf references yet. Upload a leaf and click "Save Reference"</p>
-          </div>
-        `;
-        refCountEl.textContent = '0';
-        return;
-      }
-
-      const nameMap = {};
-      leafReferences.forEach(ref => {
-        const name = ref.crop_name || ref.name;
-        if (!nameMap[name]) nameMap[name] = [];
-        nameMap[name].push(ref);
-      });
-
-      let html = '';
-      for (const [name, refs] of Object.entries(nameMap)) {
-        const latest = refs[refs.length - 1];
-        const imgSrc = latest.image_data || latest.imageData;
-        html += `
-          <div class="reference-item">
-            <img src="${imgSrc}" alt="${name}" onerror="this.style.display='none'">
-            <div class="name">${name}</div>
-            <div class="count">${refs.length} image${refs.length > 1 ? 's' : ''}</div>
-          </div>
-        `;
-      }
-      referenceGrid.innerHTML = html;
-      refCountEl.textContent = leafReferences.length;
-    }
-
-    // ---------- CLEAR REFERENCES ----------
-    clearRefsBtn.addEventListener('click', function() {
-      if (!confirm('Delete ALL leaf references?')) return;
-      leafReferences = [];
-      renderReferences();
-      if (supabase && isConnected) {
-        supabase.from('crop_references').delete().neq('id', 0).catch(() => {});
-      }
-      showToast('🗑️ References cleared');
-    });
-
-    // ---------- INIT SUPABASE ----------
+    // ---------- SUPABASE ----------
     function initSupabase() {
       try {
         if (typeof window.supabase === 'undefined') {
@@ -860,8 +576,10 @@
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           auth: { persistSession: false, autoRefreshToken: false }
         });
-        supabase.from('crop_references').select('id', { count: 'exact', head: true })
-          .then(({ error }) => {
+        
+        // Test connection and load references
+        supabase.from('crop_references').select('*')
+          .then(({ data, error }) => {
             if (error) { 
               setConnectionStatus('offline', 'Error');
               showToast('❌ DB error: ' + error.message, true);
@@ -869,47 +587,69 @@
             }
             isConnected = true;
             setConnectionStatus('online', 'Connected');
-            loadReferences();
+            
+            if (data && data.length > 0) {
+              leafReferences = data;
+              renderReferences();
+              showToast(`✅ Loaded ${data.length} crop references`);
+            } else {
+              showToast('⚠️ No crop references found. Add some to the database.', true);
+              referenceGrid.innerHTML = `
+                <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
+                  <i class="fas fa-database" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+                  <p>No crop references in database</p>
+                  <p style="font-size:12px;">Add crops using the CSV import in Supabase</p>
+                </div>
+              `;
+            }
           })
-          .catch(() => { setConnectionStatus('offline', 'Error'); });
-      } catch (e) { setConnectionStatus('offline', 'Error'); }
-    }
-
-    async function loadReferences() {
-      if (!supabase || !isConnected) return;
-      try {
-        const { data, error } = await supabase.from('crop_references').select('*').order('timestamp', { ascending: false });
-        if (!error && data && data.length > 0) {
-          leafReferences = data.map(r => ({
-            id: r.id,
-            crop_name: r.crop_name,
-            image_data: r.image_data,
-            imageData: r.image_data,
-            timestamp: r.timestamp,
-            count: r.count || 1
-          }));
-          renderReferences();
-        }
-      } catch (e) {
-        console.warn('Load references error:', e);
+          .catch(err => {
+            setConnectionStatus('offline', 'Error');
+            showToast('❌ Connection failed: ' + err.message, true);
+          });
+      } catch (e) { 
+        setConnectionStatus('offline', 'Error');
+        showToast('❌ Init error: ' + e.message, true);
       }
     }
 
-    // ---------- RETRY MODEL ----------
-    retryModelBtn.addEventListener('click', async function() {
-      this.disabled = true;
-      const success = await loadMobileNet();
-      this.disabled = false;
-      showToast(success ? '✅ AI model reloaded' : '📊 Using database matching', !success);
-    });
+    // ---------- RENDER REFERENCES ----------
+    function renderReferences() {
+      if (leafReferences.length === 0) {
+        referenceGrid.innerHTML = `
+          <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
+            <i class="fas fa-database" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+            <p>No crop references in database</p>
+          </div>
+        `;
+        refCountEl.textContent = '0';
+        return;
+      }
+
+      let html = '';
+      const uniqueCrops = [...new Set(leafReferences.map(r => r.crop_name))];
+      
+      uniqueCrops.forEach(name => {
+        const refs = leafReferences.filter(r => r.crop_name === name);
+        const latest = refs[refs.length - 1];
+        html += `
+          <div class="reference-item">
+            <img src="${latest.image_data}" alt="${name}" onerror="this.style.display='none'">
+            <div class="name">${name}</div>
+            <div class="count">${refs.length} image${refs.length > 1 ? 's' : ''}</div>
+          </div>
+        `;
+      });
+      
+      referenceGrid.innerHTML = html;
+      refCountEl.textContent = leafReferences.length;
+    }
 
     // ---------- INIT ----------
     initSupabase();
-    setTimeout(loadMobileNet, 1000);
 
-    console.log('🌱 AgriScan Zambia - Fixed Maize Identification');
-    console.log('📸 The app now uses proper leaf shape and color analysis');
-    console.log('🌽 Maize should be correctly identified as Maize, not Cassava');
+    console.log('🌱 AgriScan Zambia - Connected to Database');
+    console.log(`📊 ${leafReferences.length} crop references loaded`);
   })();
 </script>
 </body>
