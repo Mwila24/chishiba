@@ -108,6 +108,8 @@
     .db-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
     .db-stat-item { background: var(--surface); padding: 6px 16px; border-radius: 40px; border: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
     .db-stat-item strong { color: var(--primary); }
+    .match-details { font-size: 12px; color: var(--ink-faint); margin-top: 4px; padding: 8px; background: #f8f8f8; border-radius: 8px; }
+    .match-details span { display: inline-block; margin: 2px 4px; }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
@@ -205,8 +207,8 @@
   (function() {
     "use strict";
 
-    const SUPABASE_URL = 'https://ibhsdkydmsdhiknlgkwy.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliaHNka3lkbXNkaGlrbmxna3d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NDMzOTEsImV4cCI6MjEwMzUxOTM5MX0.WF8kIlzP-mCfbANfSEvkj061YifvjsVuKYRiLOql5nI';
+    const SUPABASE_URL = 'https://injvpbahfqltozrsqcmc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluanZwYmFoZnFsdG96cnNxY21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MDM0MzIsImV4cCI6MjEwMzQ3OTQzMn0.JoGibO2fqrw7sbmBbQ55EUKONQl94cqPTmkqxNoiXXk';
     let supabase = null;
     let isConnected = false;
     let leafReferences = [];
@@ -360,92 +362,129 @@
       showToast('Cleared');
     });
 
-    // ---------- IMAGE FEATURE EXTRACTION ----------
+    // ---------- IMPROVED IMAGE FEATURE EXTRACTION ----------
     function extractFeatures(imageElement) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 64;
-      canvas.height = 64;
-      ctx.drawImage(imageElement, 0, 0, 64, 64);
-      const imageData = ctx.getImageData(0, 0, 64, 64);
+      canvas.width = 128;
+      canvas.height = 128;
+      ctx.drawImage(imageElement, 0, 0, 128, 128);
+      const imageData = ctx.getImageData(0, 0, 128, 128);
       const data = imageData.data;
       
-      let r = 0, g = 0, b = 0;
+      // Color histograms with more bins
+      let rHist = new Array(16).fill(0);
+      let gHist = new Array(16).fill(0);
+      let bHist = new Array(16).fill(0);
+      let brightness = 0;
       let count = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i+1];
-        b += data[i+2];
-        count++;
-      }
-      r /= count;
-      g /= count;
-      b /= count;
       
-      let brightness = (r + g + b) / 3;
-      let variance = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        const avg = (data[i] + data[i+1] + data[i+2]) / 3;
-        variance += Math.pow(avg - brightness, 2);
-      }
-      variance /= count;
-      const contrast = Math.sqrt(variance);
+      // Edge detection features
+      let horizontalEdges = 0;
+      let verticalEdges = 0;
+      let totalEdges = 0;
       
-      let edgeStrength = 0;
-      for (let y = 1; y < 63; y++) {
-        for (let x = 1; x < 63; x++) {
-          const idx = (y * 64 + x) * 4;
-          const idxL = (y * 64 + (x-1)) * 4;
-          const idxR = (y * 64 + (x+1)) * 4;
-          const idxU = ((y-1) * 64 + x) * 4;
-          const idxD = ((y+1) * 64 + x) * 4;
-          const gx = (data[idxR] + data[idxR+1] + data[idxR+2]) - (data[idxL] + data[idxL+1] + data[idxL+2]);
-          const gy = (data[idxD] + data[idxD+1] + data[idxD+2]) - (data[idxU] + data[idxU+1] + data[idxU+2]);
-          edgeStrength += Math.sqrt(gx*gx + gy*gy) / 255;
+      for (let y = 1; y < 127; y++) {
+        for (let x = 1; x < 127; x++) {
+          const idx = (y * 128 + x) * 4;
+          const r = data[idx];
+          const g = data[idx+1];
+          const b = data[idx+2];
+          
+          // Color histograms
+          rHist[Math.floor(r / 16)]++;
+          gHist[Math.floor(g / 16)]++;
+          bHist[Math.floor(b / 16)]++;
+          
+          brightness += (r + g + b) / 3;
+          count++;
+          
+          // Edge detection (Sobel-like)
+          const idxL = (y * 128 + (x-1)) * 4;
+          const idxR = (y * 128 + (x+1)) * 4;
+          const idxU = ((y-1) * 128 + x) * 4;
+          const idxD = ((y+1) * 128 + x) * 4;
+          
+          const gx = ((data[idxR] + data[idxR+1] + data[idxR+2]) - (data[idxL] + data[idxL+1] + data[idxL+2])) / 3;
+          const gy = ((data[idxD] + data[idxD+1] + data[idxD+2]) - (data[idxU] + data[idxU+1] + data[idxU+2])) / 3;
+          
+          horizontalEdges += Math.abs(gx);
+          verticalEdges += Math.abs(gy);
+          totalEdges += Math.sqrt(gx*gx + gy*gy);
         }
       }
-      edgeStrength /= (62 * 62);
       
-      const greenDominance = g / (r + g + b + 1);
+      brightness /= count;
+      horizontalEdges /= count;
+      verticalEdges /= count;
+      totalEdges /= count;
       
-      let hash = '';
-      let avg = 0;
-      const gray = [];
+      // Normalize histograms
+      rHist = rHist.map(v => v / count);
+      gHist = gHist.map(v => v / count);
+      bHist = bHist.map(v => v / count);
+      
+      // Green dominance (important for leaves)
+      let greenDominance = 0;
       for (let i = 0; i < data.length; i += 4) {
-        const gv = (data[i] + data[i+1] + data[i+2]) / 3;
-        gray.push(gv);
-        avg += gv;
+        const g = data[i+1];
+        const r = data[i];
+        const b = data[i+2];
+        if (g > r && g > b) greenDominance++;
       }
-      avg /= gray.length;
-      for (let i = 0; i < gray.length; i++) {
-        hash += gray[i] > avg ? '1' : '0';
-      }
+      greenDominance /= (data.length / 4);
+      
+      // Aspect ratio
+      const aspectRatio = imageElement.naturalWidth / imageElement.naturalHeight;
       
       return {
-        r, g, b, brightness, contrast, edgeStrength, greenDominance,
-        hash, aspectRatio: imageElement.naturalWidth / imageElement.naturalHeight
+        rHist, gHist, bHist,
+        brightness,
+        horizontalEdges,
+        verticalEdges,
+        totalEdges,
+        greenDominance,
+        aspectRatio,
+        width: imageElement.naturalWidth,
+        height: imageElement.naturalHeight
       };
     }
 
-    function hashDistance(hash1, hash2) {
-      let diff = 0;
-      const len = Math.min(hash1.length, hash2.length);
-      for (let i = 0; i < len; i++) {
-        if (hash1[i] !== hash2[i]) diff++;
-      }
-      return diff / len;
-    }
-
     function compareFeatures(f1, f2) {
-      const colorDiff = (Math.abs(f1.r - f2.r) + Math.abs(f1.g - f2.g) + Math.abs(f1.b - f2.b)) / 765;
+      // Compare color histograms (Earth Mover's Distance approximation)
+      let histDiff = 0;
+      for (let i = 0; i < 16; i++) {
+        histDiff += Math.abs(f1.rHist[i] - f2.rHist[i]);
+        histDiff += Math.abs(f1.gHist[i] - f2.gHist[i]);
+        histDiff += Math.abs(f1.bHist[i] - f2.bHist[i]);
+      }
+      histDiff /= 48; // Normalize
+      
+      // Edge pattern comparison
+      const edgeDiff = Math.abs(f1.totalEdges - f2.totalEdges) / 255;
+      const hEdgeDiff = Math.abs(f1.horizontalEdges - f2.horizontalEdges) / 255;
+      const vEdgeDiff = Math.abs(f1.verticalEdges - f2.verticalEdges) / 255;
+      
+      // Brightness difference
       const brightDiff = Math.abs(f1.brightness - f2.brightness) / 255;
-      const contrastDiff = Math.abs(f1.contrast - f2.contrast) / 255;
-      const edgeDiff = Math.abs(f1.edgeStrength - f2.edgeStrength);
-      const hashDiff = hashDistance(f1.hash, f2.hash);
-      const aspectDiff = Math.abs(f1.aspectRatio - f2.aspectRatio) / 5;
+      
+      // Green dominance difference
       const greenDiff = Math.abs(f1.greenDominance - f2.greenDominance);
       
-      const totalDiff = (colorDiff * 0.20 + brightDiff * 0.10 + contrastDiff * 0.10 + edgeDiff * 0.15 + hashDiff * 0.25 + aspectDiff * 0.10 + greenDiff * 0.10);
+      // Aspect ratio difference
+      const aspectDiff = Math.min(1, Math.abs(f1.aspectRatio - f2.aspectRatio) / 5);
+      
+      // Weighted combination
+      const totalDiff = (
+        histDiff * 0.25 +
+        edgeDiff * 0.15 +
+        hEdgeDiff * 0.10 +
+        vEdgeDiff * 0.10 +
+        brightDiff * 0.10 +
+        greenDiff * 0.15 +
+        aspectDiff * 0.15
+      );
+      
       return Math.max(0, 1 - Math.min(1, totalDiff));
     }
 
@@ -458,12 +497,14 @@
           name: "No references",
           confidence: 0,
           method: "No database",
-          details: ["Add crop references to the database first"]
+          details: ["Add crop references to the database first"],
+          scores: {}
         };
       }
       
       let bestMatch = null;
       let bestScore = 0;
+      let allScores = {};
       
       for (const ref of leafReferences) {
         try {
@@ -478,6 +519,8 @@
             const refFeatures = extractFeatures(refImg);
             const similarity = compareFeatures(features, refFeatures);
             
+            allScores[ref.crop_name] = similarity;
+            
             if (similarity > bestScore) {
               bestScore = similarity;
               bestMatch = ref;
@@ -486,12 +529,25 @@
         } catch (e) {}
       }
       
-      if (bestMatch && bestScore > 0.25) {
+      // Sort scores for display
+      const sortedScores = Object.entries(allScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+      
+      const details = sortedScores.map(([name, score]) => 
+        `${name}: ${Math.round(score * 100)}%`
+      );
+      
+      if (bestMatch && bestScore > 0.20) {
+        // Only consider it a match if score is above threshold
+        // Otherwise, the best match is still just the closest
         return {
           name: bestMatch.crop_name,
           confidence: Math.round(Math.min(95, bestScore * 100)),
           method: 'Database Match',
-          details: [`${Math.round(bestScore * 100)}% similarity with stored reference`]
+          details: details,
+          scores: allScores,
+          allMatches: sortedScores
         };
       }
       
@@ -499,7 +555,9 @@
         name: "Unknown",
         confidence: 0,
         method: "No match",
-        details: ["No matching crop found. Try a clearer photo."]
+        details: ["No clear match found. Try a clearer photo."],
+        scores: allScores,
+        allMatches: sortedScores
       };
     }
 
@@ -515,19 +573,39 @@
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Comparing with database...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf features...</span>
       </div>`;
       analyzeBtn.disabled = true;
 
       try {
         const result = await identifyLeaf(currentImageElement);
         
-        const color = result.confidence > 60 ? '#2b7a3e' : '#d4a72c';
-        const barColor = result.confidence > 60 ? '#2b7a3e' : '#d4a72c';
+        const color = result.confidence > 50 ? '#2b7a3e' : '#d4a72c';
+        const barColor = result.confidence > 50 ? '#2b7a3e' : '#d4a72c';
         
         let detailsHtml = '';
         if (result.details && result.details.length > 0) {
-          detailsHtml = result.details.map(d => `<span style="font-size:12px;color:var(--ink-faint);background:#f0f0f0;padding:2px 10px;border-radius:12px;">${d}</span>`).join(' ');
+          detailsHtml = result.details.map(d => 
+            `<span style="display:inline-block;background:#f0f0f0;padding:2px 10px;border-radius:12px;margin:2px;font-size:11px;">${d}</span>`
+          ).join(' ');
+        }
+        
+        // Show top matches comparison
+        let matchHtml = '';
+        if (result.allMatches && result.allMatches.length > 1) {
+          matchHtml = '<div style="margin-top:6px;font-size:11px;color:var(--ink-soft);">Top matches:</div>';
+          result.allMatches.slice(0, 3).forEach(([name, score]) => {
+            const barWidth = Math.round(score * 100);
+            matchHtml += `
+              <div style="display:flex;align-items:center;gap:6px;margin:2px 0;font-size:11px;">
+                <span style="width:80px;font-weight:600;color:var(--primary);">${name}</span>
+                <div style="flex:1;height:6px;background:#eef4ea;border-radius:4px;overflow:hidden;">
+                  <div style="height:100%;width:${barWidth}%;background:${barWidth > 50 ? '#2b7a3e' : '#d4a72c'};border-radius:4px;"></div>
+                </div>
+                <span style="width:40px;text-align:right;color:var(--ink-faint);">${barWidth}%</span>
+              </div>
+            `;
+          });
         }
         
         resultContent.innerHTML = `
@@ -538,25 +616,24 @@
             </div>
             <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span style="color:${barColor};font-weight:700;">${result.confidence}%</span></div>
             <div class="confidence-bar"><div class="fill" style="width:${result.confidence}%;background:${barColor};"></div></div>
+            ${matchHtml}
             <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);font-size:13px;">
               <i class="fas fa-lightbulb" style="color:var(--gold);"></i> 
-              ${result.confidence > 60 ? 
-                `This leaf matches <strong>${result.name}</strong> in the database. ${detailsHtml}` :
+              ${result.confidence > 50 ? 
+                `This leaf matches <strong>${result.name}</strong> in the database.` :
                 result.name === "Unknown" ?
-                `No matching crop found. Try taking a clearer photo with good lighting.` :
-                `Low confidence match. Try taking another photo with better lighting.`
+                `No matching crop found. Try taking a clearer photo with good lighting and the full leaf visible.` :
+                `Low confidence match. Try another photo with better lighting.`
               }
             </div>
-            <div style="margin-top:4px;font-size:11px;color:var(--ink-faint);display:flex;gap:6px;flex-wrap:wrap;">
-              ${detailsHtml}
-            </div>
+            ${result.confidence > 50 ? `<div class="match-details">${detailsHtml}</div>` : ''}
           </div>
         `;
         
-        if (result.confidence > 60) {
+        if (result.confidence > 50) {
           showToast(`✅ Identified: ${result.name} (${result.confidence}%)`);
         } else {
-          showToast(`⚠️ Low confidence match: ${result.name} (${result.confidence}%)`, true);
+          showToast(`⚠️ No clear match found. Try another photo.`, true);
         }
       } catch (err) {
         showToast('❌ Error: ' + err.message, true);
@@ -577,7 +654,6 @@
           auth: { persistSession: false, autoRefreshToken: false }
         });
         
-        // Test connection and load references
         supabase.from('crop_references').select('*')
           .then(({ data, error }) => {
             if (error) { 
@@ -648,8 +724,9 @@
     // ---------- INIT ----------
     initSupabase();
 
-    console.log('🌱 AgriScan Zambia - Connected to Database');
-    console.log(`📊 ${leafReferences.length} crop references loaded`);
+    console.log('🌱 AgriScan Zambia - Improved Leaf Identification');
+    console.log('📊 Using advanced feature extraction with color histograms and edge detection');
+    console.log(`📸 ${leafReferences.length} crop references loaded`);
   })();
 </script>
 </body>
