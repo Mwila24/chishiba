@@ -105,9 +105,7 @@
     .reference-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
     .reference-item .name { font-size: 11px; font-weight: 600; color: var(--primary); margin-top: 4px; }
     .reference-item .count { font-size: 10px; color: var(--ink-faint); }
-    .db-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-    .db-stat-item { background: var(--surface); padding: 6px 16px; border-radius: 40px; border: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
-    .db-stat-item strong { color: var(--primary); }
+    .leaf-characteristics { font-size: 12px; color: var(--ink-soft); margin-top: 4px; padding: 6px; background: #f8f8f8; border-radius: 6px; }
     .match-details { font-size: 12px; color: var(--ink-faint); margin-top: 4px; padding: 8px; background: #f8f8f8; border-radius: 8px; }
     .match-details span { display: inline-block; margin: 2px 4px; }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
@@ -137,7 +135,7 @@
   <div class="card">
     <div class="card-header">
       <h2><i class="fas fa-seedling"></i> Identify Your Crop <span class="zambia-flag">🇿🇲</span></h2>
-      <span class="badge-ai"><i class="fas fa-database"></i> Image Matching</span>
+      <span class="badge-ai"><i class="fas fa-database"></i> Leaf Characteristics</span>
     </div>
     <div class="grid-2">
       <div>
@@ -176,7 +174,7 @@
         <div style="margin-top:12px;background:#eef4ea;border-radius:40px;padding:8px 16px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span style="font-size:12px;font-weight:500;"><i class="fas fa-database" style="color:var(--gold);"></i> <span id="refCount">0</span> crop references</span>
           <span style="font-size:11px;color:var(--ink-faint);">|</span>
-          <span style="font-size:11px;color:var(--ink-soft);">Matching against database of Zambian crops</span>
+          <span style="font-size:11px;color:var(--ink-soft);">Matching using leaf characteristics</span>
         </div>
       </div>
     </div>
@@ -186,7 +184,7 @@
   <div class="card">
     <div class="card-header">
       <h2><i class="fas fa-database"></i> Leaf Reference Database</h2>
-      <span style="font-size:12px;color:var(--ink-faint);">Crops available for matching</span>
+      <span style="font-size:12px;color:var(--ink-faint);">Crops with leaf characteristics</span>
     </div>
     <div id="referenceGrid" class="reference-grid">
       <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
@@ -214,6 +212,109 @@
     let leafReferences = [];
     let currentImageData = null;
     let currentImageElement = null;
+
+    // ---------- LEAF CHARACTERISTICS DATABASE ----------
+    const LEAF_CHARACTERISTICS = {
+      'Maize': {
+        shape: 'long and broad',
+        veins: 'parallel',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'bright green',
+        aspectRatio: '1.8-2.5',
+        description: 'Long, broad leaves with parallel veins'
+      },
+      'Cassava': {
+        shape: 'palmate',
+        veins: 'radiating',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'medium green',
+        aspectRatio: '0.8-1.2',
+        description: 'Palmate leaves with finger-like lobes'
+      },
+      'Groundnuts': {
+        shape: 'oval',
+        veins: 'net-like',
+        margin: 'smooth',
+        texture: 'slightly hairy',
+        color: 'dark green',
+        aspectRatio: '1.2-1.6',
+        description: 'Small, oval leaves with paired leaflets'
+      },
+      'Soybeans': {
+        shape: 'trifoliate',
+        veins: 'net-like',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'medium green',
+        aspectRatio: '1.0-1.4',
+        description: 'Trifoliate leaves with oval leaflets'
+      },
+      'Pumpkin': {
+        shape: 'round and lobed',
+        veins: 'radiating',
+        margin: 'toothed',
+        texture: 'rough',
+        color: 'dark green',
+        aspectRatio: '0.9-1.3',
+        description: 'Large, round leaves with distinct lobes'
+      },
+      'Sweet Potato': {
+        shape: 'heart-shaped',
+        veins: 'radiating',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'medium green',
+        aspectRatio: '0.8-1.2',
+        description: 'Heart-shaped or lobed leaves'
+      },
+      'Sorghum': {
+        shape: 'long and narrow',
+        veins: 'parallel',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'light green',
+        aspectRatio: '3.0-5.0',
+        description: 'Long, narrow, pointed leaves'
+      },
+      'Cotton': {
+        shape: 'palmate lobed',
+        veins: 'radiating',
+        margin: 'lobed',
+        texture: 'smooth',
+        color: 'medium green',
+        aspectRatio: '0.8-1.2',
+        description: 'Palmate leaves with 3-5 lobes'
+      },
+      'Sunflower': {
+        shape: 'broad and heart-shaped',
+        veins: 'net-like',
+        margin: 'toothed',
+        texture: 'rough',
+        color: 'dark green',
+        aspectRatio: '0.9-1.4',
+        description: 'Broad, heart-shaped leaves with rough texture'
+      },
+      'Cowpea': {
+        shape: 'trifoliate',
+        veins: 'net-like',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'medium green',
+        aspectRatio: '1.0-1.5',
+        description: 'Trifoliate leaves with oval leaflets'
+      },
+      'Millet': {
+        shape: 'long and narrow',
+        veins: 'parallel',
+        margin: 'smooth',
+        texture: 'smooth',
+        color: 'light green',
+        aspectRatio: '3.0-6.0',
+        description: 'Long, narrow, pointed leaves'
+      }
+    };
 
     // ---------- UI Elements ----------
     const statusDot = document.getElementById('statusDot');
@@ -362,8 +463,8 @@
       showToast('Cleared');
     });
 
-    // ---------- IMPROVED IMAGE FEATURE EXTRACTION ----------
-    function extractFeatures(imageElement) {
+    // ---------- IMAGE FEATURE EXTRACTION ----------
+    function extractLeafFeatures(imageElement) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 128;
@@ -372,34 +473,34 @@
       const imageData = ctx.getImageData(0, 0, 128, 128);
       const data = imageData.data;
       
-      // Color histograms with more bins
-      let rHist = new Array(16).fill(0);
-      let gHist = new Array(16).fill(0);
-      let bHist = new Array(16).fill(0);
-      let brightness = 0;
+      // Calculate aspect ratio
+      const aspectRatio = imageElement.naturalWidth / imageElement.naturalHeight;
+      
+      // Color analysis
+      let r = 0, g = 0, b = 0;
       let count = 0;
+      let greenDominance = 0;
       
-      // Edge detection features
-      let horizontalEdges = 0;
-      let verticalEdges = 0;
-      let totalEdges = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i+1];
+        b += data[i+2];
+        if (data[i+1] > data[i] && data[i+1] > data[i+2]) greenDominance++;
+        count++;
+      }
+      r /= count;
+      g /= count;
+      b /= count;
+      greenDominance /= (count / 100);
       
-      for (let y = 1; y < 127; y++) {
-        for (let x = 1; x < 127; x++) {
+      // Brightness
+      const brightness = (r + g + b) / 3;
+      
+      // Edge detection (simplified)
+      let edges = 0;
+      for (let y = 2; y < 126; y++) {
+        for (let x = 2; x < 126; x++) {
           const idx = (y * 128 + x) * 4;
-          const r = data[idx];
-          const g = data[idx+1];
-          const b = data[idx+2];
-          
-          // Color histograms
-          rHist[Math.floor(r / 16)]++;
-          gHist[Math.floor(g / 16)]++;
-          bHist[Math.floor(b / 16)]++;
-          
-          brightness += (r + g + b) / 3;
-          count++;
-          
-          // Edge detection (Sobel-like)
           const idxL = (y * 128 + (x-1)) * 4;
           const idxR = (y * 128 + (x+1)) * 4;
           const idxU = ((y-1) * 128 + x) * 4;
@@ -407,90 +508,25 @@
           
           const gx = ((data[idxR] + data[idxR+1] + data[idxR+2]) - (data[idxL] + data[idxL+1] + data[idxL+2])) / 3;
           const gy = ((data[idxD] + data[idxD+1] + data[idxD+2]) - (data[idxU] + data[idxU+1] + data[idxU+2])) / 3;
-          
-          horizontalEdges += Math.abs(gx);
-          verticalEdges += Math.abs(gy);
-          totalEdges += Math.sqrt(gx*gx + gy*gy);
+          edges += Math.sqrt(gx*gx + gy*gy);
         }
       }
-      
-      brightness /= count;
-      horizontalEdges /= count;
-      verticalEdges /= count;
-      totalEdges /= count;
-      
-      // Normalize histograms
-      rHist = rHist.map(v => v / count);
-      gHist = gHist.map(v => v / count);
-      bHist = bHist.map(v => v / count);
-      
-      // Green dominance (important for leaves)
-      let greenDominance = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        const g = data[i+1];
-        const r = data[i];
-        const b = data[i+2];
-        if (g > r && g > b) greenDominance++;
-      }
-      greenDominance /= (data.length / 4);
-      
-      // Aspect ratio
-      const aspectRatio = imageElement.naturalWidth / imageElement.naturalHeight;
+      edges /= (124 * 124 * 255);
       
       return {
-        rHist, gHist, bHist,
-        brightness,
-        horizontalEdges,
-        verticalEdges,
-        totalEdges,
-        greenDominance,
         aspectRatio,
+        r, g, b,
+        brightness,
+        greenDominance,
+        edges,
         width: imageElement.naturalWidth,
         height: imageElement.naturalHeight
       };
     }
 
-    function compareFeatures(f1, f2) {
-      // Compare color histograms (Earth Mover's Distance approximation)
-      let histDiff = 0;
-      for (let i = 0; i < 16; i++) {
-        histDiff += Math.abs(f1.rHist[i] - f2.rHist[i]);
-        histDiff += Math.abs(f1.gHist[i] - f2.gHist[i]);
-        histDiff += Math.abs(f1.bHist[i] - f2.bHist[i]);
-      }
-      histDiff /= 48; // Normalize
-      
-      // Edge pattern comparison
-      const edgeDiff = Math.abs(f1.totalEdges - f2.totalEdges) / 255;
-      const hEdgeDiff = Math.abs(f1.horizontalEdges - f2.horizontalEdges) / 255;
-      const vEdgeDiff = Math.abs(f1.verticalEdges - f2.verticalEdges) / 255;
-      
-      // Brightness difference
-      const brightDiff = Math.abs(f1.brightness - f2.brightness) / 255;
-      
-      // Green dominance difference
-      const greenDiff = Math.abs(f1.greenDominance - f2.greenDominance);
-      
-      // Aspect ratio difference
-      const aspectDiff = Math.min(1, Math.abs(f1.aspectRatio - f2.aspectRatio) / 5);
-      
-      // Weighted combination
-      const totalDiff = (
-        histDiff * 0.25 +
-        edgeDiff * 0.15 +
-        hEdgeDiff * 0.10 +
-        vEdgeDiff * 0.10 +
-        brightDiff * 0.10 +
-        greenDiff * 0.15 +
-        aspectDiff * 0.15
-      );
-      
-      return Math.max(0, 1 - Math.min(1, totalDiff));
-    }
-
-    // ---------- IDENTIFICATION ----------
+    // ---------- IDENTIFICATION USING CHARACTERISTICS ----------
     async function identifyLeaf(imageElement) {
-      const features = extractFeatures(imageElement);
+      const features = extractLeafFeatures(imageElement);
       
       if (leafReferences.length === 0) {
         return {
@@ -498,56 +534,156 @@
           confidence: 0,
           method: "No database",
           details: ["Add crop references to the database first"],
-          scores: {}
+          characteristics: {}
         };
       }
       
-      let bestMatch = null;
-      let bestScore = 0;
-      let allScores = {};
+      let scores = {};
+      let details = {};
       
       for (const ref of leafReferences) {
-        try {
-          const refImg = new Image();
-          refImg.src = ref.image_data;
-          await new Promise((resolve) => {
-            refImg.onload = resolve;
-            refImg.onerror = () => resolve();
-          });
-          
-          if (refImg.complete && refImg.naturalWidth > 0) {
-            const refFeatures = extractFeatures(refImg);
-            const similarity = compareFeatures(features, refFeatures);
-            
-            allScores[ref.crop_name] = similarity;
-            
-            if (similarity > bestScore) {
-              bestScore = similarity;
-              bestMatch = ref;
-            }
+        const cropName = ref.crop_name;
+        const char = LEAF_CHARACTERISTICS[cropName];
+        
+        if (!char) {
+          scores[cropName] = 0.5; // Default score if no characteristics
+          continue;
+        }
+        
+        let score = 0;
+        let matchDetails = [];
+        
+        // 1. Aspect ratio matching
+        const aspect = features.aspectRatio;
+        const targetAspect = char.aspectRatio;
+        if (targetAspect) {
+          const [min, max] = targetAspect.split('-').map(Number);
+          if (aspect >= min && aspect <= max) {
+            score += 30;
+            matchDetails.push(`Aspect ratio ${aspect.toFixed(2)} matches ${targetAspect}`);
+          } else {
+            // Partial credit based on closeness
+            const mid = (min + max) / 2;
+            const diff = Math.abs(aspect - mid) / (max - min + 1);
+            score += Math.max(0, 30 - diff * 30);
           }
-        } catch (e) {}
+        }
+        
+        // 2. Color matching (green dominance)
+        const greenScore = features.greenDominance;
+        if (char.color) {
+          if (char.color.includes('bright') && greenScore > 0.5) {
+            score += 20;
+            matchDetails.push('Bright green color');
+          } else if (char.color.includes('dark') && greenScore > 0.6) {
+            score += 20;
+            matchDetails.push('Dark green color');
+          } else if (char.color.includes('medium') && greenScore > 0.4 && greenScore < 0.6) {
+            score += 20;
+            matchDetails.push('Medium green color');
+          } else if (char.color.includes('light') && greenScore < 0.5) {
+            score += 20;
+            matchDetails.push('Light green color');
+          }
+        }
+        
+        // 3. Shape matching based on aspect ratio
+        if (char.shape) {
+          if (char.shape.includes('long') && aspect > 1.8) {
+            score += 25;
+            matchDetails.push('Long leaf shape');
+          } else if (char.shape.includes('narrow') && aspect > 2.5) {
+            score += 25;
+            matchDetails.push('Narrow leaf shape');
+          } else if (char.shape.includes('oval') && aspect > 1.2 && aspect < 1.8) {
+            score += 25;
+            matchDetails.push('Oval leaf shape');
+          } else if (char.shape.includes('round') && aspect < 1.3) {
+            score += 25;
+            matchDetails.push('Round leaf shape');
+          } else if (char.shape.includes('palmate') && aspect < 1.2) {
+            score += 25;
+            matchDetails.push('Palmate leaf shape');
+          } else if (char.shape.includes('heart') && aspect < 1.2) {
+            score += 25;
+            matchDetails.push('Heart-shaped leaf');
+          } else if (char.shape.includes('trifoliate') && aspect > 0.9 && aspect < 1.5) {
+            score += 25;
+            matchDetails.push('Trifoliate leaf shape');
+          }
+        }
+        
+        // 4. Texture (edge detection)
+        const edgeScore = features.edges;
+        if (char.texture) {
+          if (char.texture.includes('rough') && edgeScore > 0.3) {
+            score += 15;
+            matchDetails.push('Rough texture');
+          } else if (char.texture.includes('smooth') && edgeScore < 0.25) {
+            score += 15;
+            matchDetails.push('Smooth texture');
+          } else if (char.texture.includes('hairy') && edgeScore > 0.2) {
+            score += 15;
+            matchDetails.push('Hairy texture');
+          }
+        }
+        
+        // 5. Vein pattern (inferred from shape and aspect ratio)
+        if (char.veins) {
+          if (char.veins.includes('parallel') && aspect > 1.8) {
+            score += 10;
+            matchDetails.push('Parallel veins');
+          } else if (char.veins.includes('radiating') && aspect < 1.3) {
+            score += 10;
+            matchDetails.push('Radiating veins');
+          } else if (char.veins.includes('net') && aspect > 1.0 && aspect < 1.8) {
+            score += 10;
+            matchDetails.push('Net-like veins');
+          }
+        }
+        
+        scores[cropName] = Math.min(100, score);
+        details[cropName] = {
+          score: Math.min(100, score),
+          matches: matchDetails.slice(0, 5)
+        };
       }
       
-      // Sort scores for display
-      const sortedScores = Object.entries(allScores)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
+      // Find best match
+      let bestMatch = null;
+      let bestScore = 0;
+      let sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       
-      const details = sortedScores.map(([name, score]) => 
-        `${name}: ${Math.round(score * 100)}%`
-      );
+      if (sortedScores.length > 0) {
+        bestMatch = sortedScores[0][0];
+        bestScore = sortedScores[0][1];
+      }
       
-      if (bestMatch && bestScore > 0.20) {
-        // Only consider it a match if score is above threshold
-        // Otherwise, the best match is still just the closest
+      // Only return a match if score is above threshold
+      if (bestMatch && bestScore > 30) {
+        const topMatches = sortedScores.slice(0, 3).map(([name, score]) => 
+          `${name}: ${Math.round(score)}%`
+        );
+        
         return {
-          name: bestMatch.crop_name,
-          confidence: Math.round(Math.min(95, bestScore * 100)),
-          method: 'Database Match',
-          details: details,
-          scores: allScores,
-          allMatches: sortedScores
+          name: bestMatch,
+          confidence: Math.round(Math.min(95, bestScore)),
+          method: 'Characteristic Matching',
+          details: topMatches,
+          characteristics: LEAF_CHARACTERISTICS[bestMatch],
+          matchDetails: details[bestMatch]?.matches || []
+        };
+      }
+      
+      // If no good match, return the best available with low confidence
+      if (bestMatch) {
+        return {
+          name: bestMatch,
+          confidence: Math.round(Math.min(50, bestScore)),
+          method: 'Low Confidence',
+          details: [`Best match: ${bestMatch} (${Math.round(bestScore)}%)`],
+          characteristics: LEAF_CHARACTERISTICS[bestMatch],
+          matchDetails: []
         };
       }
       
@@ -555,9 +691,9 @@
         name: "Unknown",
         confidence: 0,
         method: "No match",
-        details: ["No clear match found. Try a clearer photo."],
-        scores: allScores,
-        allMatches: sortedScores
+        details: ["No matching crop found. Try a clearer photo."],
+        characteristics: null,
+        matchDetails: []
       };
     }
 
@@ -573,7 +709,7 @@
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf features...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf characteristics...</span>
       </div>`;
       analyzeBtn.disabled = true;
 
@@ -590,22 +726,31 @@
           ).join(' ');
         }
         
-        // Show top matches comparison
-        let matchHtml = '';
-        if (result.allMatches && result.allMatches.length > 1) {
-          matchHtml = '<div style="margin-top:6px;font-size:11px;color:var(--ink-soft);">Top matches:</div>';
-          result.allMatches.slice(0, 3).forEach(([name, score]) => {
-            const barWidth = Math.round(score * 100);
-            matchHtml += `
-              <div style="display:flex;align-items:center;gap:6px;margin:2px 0;font-size:11px;">
-                <span style="width:80px;font-weight:600;color:var(--primary);">${name}</span>
-                <div style="flex:1;height:6px;background:#eef4ea;border-radius:4px;overflow:hidden;">
-                  <div style="height:100%;width:${barWidth}%;background:${barWidth > 50 ? '#2b7a3e' : '#d4a72c'};border-radius:4px;"></div>
-                </div>
-                <span style="width:40px;text-align:right;color:var(--ink-faint);">${barWidth}%</span>
+        let charHtml = '';
+        if (result.characteristics) {
+          const chars = result.characteristics;
+          charHtml = `
+            <div style="margin-top:6px;background:#fff;padding:8px 12px;border-radius:10px;border:1px solid #eef4ea;font-size:12px;">
+              <div style="font-weight:600;color:var(--primary);margin-bottom:4px;">Leaf Characteristics:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Shape: ${chars.shape}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Veins: ${chars.veins}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Color: ${chars.color}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Texture: ${chars.texture}</span>
               </div>
-            `;
-          });
+              <div style="margin-top:4px;color:var(--ink-soft);font-style:italic;">${chars.description}</div>
+            </div>
+          `;
+        }
+        
+        let matchDetailsHtml = '';
+        if (result.matchDetails && result.matchDetails.length > 0) {
+          matchDetailsHtml = `
+            <div style="margin-top:4px;font-size:11px;color:var(--ink-faint);">
+              <i class="fas fa-check-circle" style="color:var(--gold);"></i> 
+              ${result.matchDetails.slice(0, 3).join(' • ')}
+            </div>
+          `;
         }
         
         resultContent.innerHTML = `
@@ -616,22 +761,25 @@
             </div>
             <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span style="color:${barColor};font-weight:700;">${result.confidence}%</span></div>
             <div class="confidence-bar"><div class="fill" style="width:${result.confidence}%;background:${barColor};"></div></div>
-            ${matchHtml}
+            ${charHtml}
+            ${matchDetailsHtml}
             <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);font-size:13px;">
               <i class="fas fa-lightbulb" style="color:var(--gold);"></i> 
               ${result.confidence > 50 ? 
-                `This leaf matches <strong>${result.name}</strong> in the database.` :
+                `This leaf matches <strong>${result.name}</strong> based on shape, color, and texture characteristics.` :
                 result.name === "Unknown" ?
-                `No matching crop found. Try taking a clearer photo with good lighting and the full leaf visible.` :
+                `No matching crop found. Try taking a clearer photo with the full leaf visible.` :
                 `Low confidence match. Try another photo with better lighting.`
               }
             </div>
-            ${result.confidence > 50 ? `<div class="match-details">${detailsHtml}</div>` : ''}
+            ${result.confidence > 30 ? `<div class="match-details">${detailsHtml}</div>` : ''}
           </div>
         `;
         
         if (result.confidence > 50) {
           showToast(`✅ Identified: ${result.name} (${result.confidence}%)`);
+        } else if (result.confidence > 30) {
+          showToast(`⚠️ Low confidence: ${result.name} (${result.confidence}%)`, true);
         } else {
           showToast(`⚠️ No clear match found. Try another photo.`, true);
         }
@@ -708,10 +856,14 @@
       uniqueCrops.forEach(name => {
         const refs = leafReferences.filter(r => r.crop_name === name);
         const latest = refs[refs.length - 1];
+        const char = LEAF_CHARACTERISTICS[name];
+        const charSummary = char ? char.shape : 'Unknown';
+        
         html += `
           <div class="reference-item">
             <img src="${latest.image_data}" alt="${name}" onerror="this.style.display='none'">
             <div class="name">${name}</div>
+            <div class="leaf-characteristics">${charSummary}</div>
             <div class="count">${refs.length} image${refs.length > 1 ? 's' : ''}</div>
           </div>
         `;
@@ -724,8 +876,8 @@
     // ---------- INIT ----------
     initSupabase();
 
-    console.log('🌱 AgriScan Zambia - Improved Leaf Identification');
-    console.log('📊 Using advanced feature extraction with color histograms and edge detection');
+    console.log('🌱 AgriScan Zambia - Leaf Characteristic Matching');
+    console.log('📊 Using 10 crop characteristics for identification');
     console.log(`📸 ${leafReferences.length} crop references loaded`);
   })();
 </script>
