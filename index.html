@@ -100,14 +100,14 @@
     .camera-controls .btn { min-width: 120px; justify-content: center; }
     .confidence-bar { width: 100%; height: 8px; background: #eef4ea; border-radius: 10px; overflow: hidden; margin-top: 6px; }
     .confidence-bar .fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
-    .reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
-    .reference-item { background: var(--surface); border-radius: 12px; padding: 8px; border: 2px solid var(--border); text-align: center; }
-    .reference-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
-    .reference-item .name { font-size: 11px; font-weight: 600; color: var(--primary); margin-top: 4px; }
-    .reference-item .count { font-size: 10px; color: var(--ink-faint); }
+    .reference-grid { display: none; } /* HIDDEN: database reference grid */
+    .reference-item { display: none; } /* HIDDEN */
     .leaf-characteristics { font-size: 12px; color: var(--ink-soft); margin-top: 4px; padding: 6px; background: #f8f8f8; border-radius: 6px; }
     .match-details { font-size: 12px; color: var(--ink-faint); margin-top: 4px; padding: 8px; background: #f8f8f8; border-radius: 8px; }
     .match-details span { display: inline-block; margin: 2px 4px; }
+    /* hide the second card entirely */
+    .card.reference-card { display: none !important; }
+    .footer-note { text-align: center; font-size: 13px; color: var(--ink-faint); padding: 20px 0 10px; border-top: 1px solid var(--border); margin-top: 12px; letter-spacing: 0.3px; display: flex; justify-content: center; align-items: center; gap: 8px; }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
@@ -180,8 +180,8 @@
     </div>
   </div>
 
-  <!-- Reference Database -->
-  <div class="card">
+  <!-- Reference Database – HIDDEN from user -->
+  <div class="card reference-card" style="display:none !important;">
     <div class="card-header">
       <h2><i class="fas fa-database"></i> Leaf Reference Database</h2>
       <span style="font-size:12px;color:var(--ink-faint);">Crops with leaf characteristics</span>
@@ -814,17 +814,12 @@
             
             if (data && data.length > 0) {
               leafReferences = data;
-              renderReferences();
+              // reference grid is hidden, but we update the count
+              refCountEl.textContent = data.length;
               showToast(`✅ Loaded ${data.length} crop references`);
             } else {
               showToast('⚠️ No crop references found. Add some to the database.', true);
-              referenceGrid.innerHTML = `
-                <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
-                  <i class="fas fa-database" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-                  <p>No crop references in database</p>
-                  <p style="font-size:12px;">Add crops using the CSV import in Supabase</p>
-                </div>
-              `;
+              refCountEl.textContent = '0';
             }
           })
           .catch(err => {
@@ -837,40 +832,9 @@
       }
     }
 
-    // ---------- RENDER REFERENCES ----------
+    // ---------- RENDER REFERENCES (hidden, but we keep count) ----------
     function renderReferences() {
-      if (leafReferences.length === 0) {
-        referenceGrid.innerHTML = `
-          <div style="text-align:center;padding:20px;color:var(--ink-faint);grid-column:1/-1;">
-            <i class="fas fa-database" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-            <p>No crop references in database</p>
-          </div>
-        `;
-        refCountEl.textContent = '0';
-        return;
-      }
-
-      let html = '';
-      const uniqueCrops = [...new Set(leafReferences.map(r => r.crop_name))];
-      
-      uniqueCrops.forEach(name => {
-        const refs = leafReferences.filter(r => r.crop_name === name);
-        const latest = refs[refs.length - 1];
-        const char = LEAF_CHARACTERISTICS[name];
-        const charSummary = char ? char.shape : 'Unknown';
-        
-        html += `
-          <div class="reference-item">
-            <img src="${latest.image_data}" alt="${name}" onerror="this.style.display='none'">
-            <div class="name">${name}</div>
-            <div class="leaf-characteristics">${charSummary}</div>
-            <div class="count">${refs.length} image${refs.length > 1 ? 's' : ''}</div>
-          </div>
-        `;
-      });
-      
-      referenceGrid.innerHTML = html;
-      refCountEl.textContent = leafReferences.length;
+      // no-op: grid is hidden
     }
 
     // ---------- INIT ----------
