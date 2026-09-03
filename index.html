@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>AgriScan Zambia · Leaf Identification</title>
   <meta name="theme-color" content="#1e3c2c">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
   <style>
@@ -108,6 +112,23 @@
     /* hide the second card entirely */
     .card.reference-card { display: none !important; }
     .footer-note { text-align: center; font-size: 13px; color: var(--ink-faint); padding: 20px 0 10px; border-top: 1px solid var(--border); margin-top: 12px; letter-spacing: 0.3px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .lang-select {
+      background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(212,167,44,0.5);
+      border-radius: 40px; padding: 6px 12px; font-size: 12px; font-family: var(--font-body);
+      font-weight: 500; cursor: pointer; -webkit-appearance: none; appearance: none;
+    }
+    .lang-select option { background: #1e3c2c; color: #fff; }
+    .disclaimer-card {
+      background: #fdf6e3; border: 1px solid #ecd88f; border-left: 6px solid var(--gold);
+      border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .disclaimer-card i { color: #b8860b; font-size: 18px; margin-top: 2px; }
+    .disclaimer-card p { font-size: 13px; color: #4a3d1a; line-height: 1.5; }
+    .disclaimer-card strong { color: #8a6d1a; }
+    .disease-pill { display: inline-block; padding: 3px 12px; border-radius: 40px; font-size: 12px; font-weight: 700; }
+    .disease-pill.healthy { background: #e1f2e0; color: #1f6b3a; }
+    .disease-pill.warning { background: #fbe3dd; color: #a13d2a; }
+    .disease-pill.uncertain { background: #eee; color: #6b6b6b; }
     @media (max-width: 480px) { .topbar .brand h1 { font-size: 18px; } .topbar .brand .icon-leaf { width: 40px; height: 40px; font-size: 24px; } .card { padding: 16px; } .action-buttons .btn { min-width: 80px; font-size: 12px; padding: 10px 14px; } }
   </style>
 </head>
@@ -119,44 +140,58 @@
     <div class="icon-leaf"><i class="fas fa-leaf"></i></div>
     <div>
       <h1>AgriVision Zambia</h1>
-      <div class="tagline"><i class="fas fa-database"></i> Smart Leaf Diagnosis</div>
+      <div class="tagline"><i class="fas fa-database"></i> <span data-i18n="tagline">Smart Leaf Diagnosis</span></div>
     </div>
   </div>
-  <div class="status-badge" id="dbStatus">
-    <span class="connection-status">
-      <span class="dot connecting" id="statusDot"></span>
-      <span id="statusText">Connecting...</span>
-    </span>
-    <span class="model-load" id="modelStatus">📊 Database Mode</span>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <select class="lang-select" id="langSelect" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ny">Chinyanja</option>
+      <option value="bem">Chibemba</option>
+      <option value="toi">Chitonga</option>
+      <option value="loz">Silozi</option>
+    </select>
+    <div class="status-badge" id="dbStatus">
+      <span class="connection-status">
+        <span class="dot connecting" id="statusDot"></span>
+        <span id="statusText" data-i18n="statusConnecting">Connecting...</span>
+      </span>
+      <span class="model-load" id="modelStatus">📸 <span data-i18n="modeLabel">Photo Matching</span></span>
+    </div>
   </div>
 </div>
 
 <div class="shell">
+  <div class="disclaimer-card">
+    <i class="fas fa-triangle-exclamation"></i>
+    <p data-i18n="disclaimerText"><strong>Important:</strong> This app gives a rough estimate only, based on leaf shape, colour and texture. It is not a certified diagnosis. If a result says "Uncertain" or a crop looks sick, please also show it to your local agriculture extension officer before treating it.</p>
+  </div>
+
   <div class="card">
     <div class="card-header">
-      <h2><i class="fas fa-seedling"></i> Identify Your Crop <span class="zambia-flag">🇿🇲</span></h2>
-      <span class="badge-ai"><i class="fas fa-database"></i> Leaf Characteristics</span>
+      <h2><i class="fas fa-seedling"></i> <span data-i18n="sectionTitle">Identify Your Crop</span> <span class="zambia-flag">🇿🇲</span></h2>
+      <span class="badge-ai"><i class="fas fa-database"></i> <span data-i18n="badgeMatching">Photo Matching</span></span>
     </div>
     <div class="grid-2">
       <div>
         <div class="upload-zone" id="uploadZone">
           <i class="fas fa-cloud-upload-alt"></i>
-          <h3>Upload Leaf Photo</h3>
-          <p>Drag & drop, click, or use camera</p>
+          <h3 data-i18n="uploadTitle">Upload Leaf Photo</h3>
+          <p data-i18n="uploadSubtitle">Drag & drop, click, or use camera</p>
           <input type="file" class="file-input" id="fileInput" accept="image/*">
         </div>
         <video id="cameraVideo" autoplay playsinline></video>
         <div class="camera-controls" id="cameraControls">
-          <button class="btn btn-success" id="captureBtn"><i class="fas fa-camera"></i> Capture</button>
-          <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> Stop</button>
+          <button class="btn btn-success" id="captureBtn"><i class="fas fa-camera"></i> <span data-i18n="btnCapture">Capture</span></button>
+          <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> <span data-i18n="btnStop">Stop</span></button>
         </div>
         <div id="previewContainer" class="preview-box" style="display:none;">
           <img id="previewImage" src="#" alt="preview">
         </div>
         <div class="action-buttons">
-          <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> Camera</button>
-          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> Identify</button>
-          <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> Clear</button>
+          <button class="btn btn-camera" id="cameraBtn"><i class="fas fa-camera"></i> <span data-i18n="btnCamera">Camera</span></button>
+          <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-microscope"></i> <span data-i18n="btnIdentify">Identify</span></button>
+          <button class="btn btn-outline" id="clearBtn"><i class="fas fa-undo-alt"></i> <span data-i18n="btnClear">Clear</span></button>
         </div>
       </div>
       <div>
@@ -164,17 +199,17 @@
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <i class="fas fa-robot" style="color:var(--gold);font-size:20px;"></i>
-              <span style="font-weight:600;color:var(--primary);">Diagnosis</span>
+              <span style="font-weight:600;color:var(--primary);" data-i18n="diagnosisLabel">Diagnosis</span>
             </div>
           </div>
           <div id="resultContent">
-            <p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>
+            <p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> <span data-i18n="resultPlaceholder">Upload a leaf image to identify</span></p>
           </div>
         </div>
         <div style="margin-top:12px;background:#eef4ea;border-radius:40px;padding:8px 16px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:12px;font-weight:500;"><i class="fas fa-database" style="color:var(--gold);"></i> <span id="refCount">0</span> crop references</span>
+          <span style="font-size:12px;font-weight:500;"><i class="fas fa-database" style="color:var(--gold);"></i> <span id="refCount">0</span> <span data-i18n="refCountSuffix">crop references</span></span>
           <span style="font-size:11px;color:var(--ink-faint);">|</span>
-          <span style="font-size:11px;color:var(--ink-soft);">Matching using leaf characteristics</span>
+          <span style="font-size:11px;color:var(--ink-soft);" data-i18n="matchingNote">Matching against real reference photos</span>
         </div>
       </div>
     </div>
@@ -195,7 +230,7 @@
   </div>
 
   <div class="footer-note">
-    <i class="fas fa-leaf" style="color:var(--gold);"></i> AgriVision Zambia · Smart Leaf Diagnosis · Zambian Crop Database
+    <i class="fas fa-leaf" style="color:var(--gold);"></i> <span data-i18n="footerNote">AgriVision Zambia · Smart Leaf Diagnosis · Zambian Crop Database</span>
   </div>
 </div>
 
@@ -212,6 +247,167 @@
     let leafReferences = [];
     let currentImageData = null;
     let currentImageElement = null;
+
+    // ---------- TRANSLATIONS ----------
+    // First-draft translations. UI chrome only — crop and disease names are
+    // intentionally left in English (see note in chat) since a wrong
+    // agricultural term is more harmful than an English word the farmer
+    // shows to an extension officer. Please have a native speaker of each
+    // language review this before relying on it, especially Tonga and Lozi.
+    const TRANSLATIONS = {
+      en: {
+        tagline: 'Smart Leaf Diagnosis', statusConnecting: 'Connecting...', statusConnected: 'Connected',
+        statusOffline: 'Offline', statusError: 'Error', modeLabel: 'Photo Matching', sectionTitle: 'Identify Your Crop',
+        badgeMatching: 'Photo Matching', uploadTitle: 'Upload Leaf Photo', uploadSubtitle: 'Drag & drop, click, or use camera',
+        btnCamera: 'Camera', btnIdentify: 'Identify', btnClear: 'Clear', btnCapture: 'Capture', btnStop: 'Stop',
+        diagnosisLabel: 'Diagnosis', resultPlaceholder: 'Upload a leaf image to identify',
+        refCountSuffix: 'crop references', matchingNote: 'Matching against real reference photos',
+        footerNote: 'AgriVision Zambia · Smart Leaf Diagnosis · Zambian Crop Database',
+        disclaimerText: '<strong>Important:</strong> This app gives a rough estimate only, based on leaf shape, colour and texture. It is not a certified diagnosis. If a result says "Uncertain" or a crop looks sick, please also show it to your local agriculture extension officer before treating it.',
+        imageLoadedMsg: 'Image loaded. Click Identify.', photoCapturedMsg: 'Photo captured. Click Identify.',
+        analyzingMsg: 'Analysing leaf...', clearedMsg: 'Cleared', cameraReadyMsg: 'Camera ready',
+        cameraActiveMsg: 'Camera is already on', cameraNotSupportedMsg: 'Camera not supported on this device',
+        cameraErrorMsg: 'Camera error', pleaseUploadMsg: 'Please upload an image first',
+        pleaseUploadTypeMsg: 'Please upload an image file', noReferencesMsg: 'No crop references in the database yet',
+        startCameraFirstMsg: 'Start the camera first', loadedReferencesMsg: 'Loaded {n} crop references',
+        noReferencesFoundMsg: 'No crop references found in the database', dbErrorMsg: 'Database error',
+        connectionFailedMsg: 'Connection failed', loadingPhotosMsg: 'Reading reference photos...',
+        identifiedMsg: 'Identified: {crop}', uncertainMsg: 'Uncertain — take another clearer photo',
+        lowConfMsg: 'Low confidence — try another photo', noMatchMsg: 'No clear match. Try another photo.',
+        cropLabel: 'Crop', healthyLabel: 'Looks Healthy', issueLabel: 'Possible issue found',
+        uncertainLabel: 'Uncertain', confidenceLabel: 'Confidence', topMatchesLabel: 'Other possibilities',
+        adviceHealthy: 'This leaf looks like {crop} and shows no obvious signs of disease.',
+        adviceWarning: 'This leaf looks like {crop} and may show signs of: {disease}. Please confirm with an extension officer before treating.',
+        adviceUncertain: 'Not confident enough to give a result. Try a clearer, closer photo in good light, against a plain background.'
+      },
+      ny: {
+        tagline: 'Kuzindikira Masamba Mwanzeru', statusConnecting: 'Kulumikiza...', statusConnected: 'Yalumikizidwa',
+        statusOffline: 'Palibe Kulumikizana', statusError: 'Vuto', modeLabel: 'Kuyerekeza Zithunzi', sectionTitle: 'Dziwani Mbewu Yanu',
+        badgeMatching: 'Kuyerekeza Zithunzi', uploadTitle: 'Ikani Chithunzi cha Tsamba', uploadSubtitle: 'Kokani ndikuponya, dinani, kapena gwiritsani kamera',
+        btnCamera: 'Kamera', btnIdentify: 'Dziwani', btnClear: 'Chotsani', btnCapture: 'Jambulani', btnStop: 'Imitsani',
+        diagnosisLabel: 'Zotsatira', resultPlaceholder: 'Ikani chithunzi cha tsamba kuti tidziwe',
+        refCountSuffix: 'zitsanzo za mbewu', matchingNote: 'Kuyerekezera ndi zithunzi zenizeni',
+        footerNote: 'AgriVision Zambia · Kuzindikira Masamba Mwanzeru · Zosungidwa za Mbewu za ku Zambia',
+        disclaimerText: '<strong>Chidziwitso:</strong> Application iyi imangopereka kuyerekeza kokha, kutengera mawonekedwe, mtundu, ndi mafupipafupi a tsamba. Si mayankho enieni ochokera kwa katswiri. Ngati yankho likuti "Sitikutsimikiza" kapena mbewu ikuwoneka yodwala, onaninso ndi mkulu wa zaulimi (extension officer) musanayambe kuthandiza mbewuyo.',
+        imageLoadedMsg: "Chithunzi chalowa. Dinani 'Dziwani'.", photoCapturedMsg: "Chithunzi chajambulidwa. Dinani 'Dziwani'.",
+        analyzingMsg: 'Tikuyang\u2019ana tsambalo...', clearedMsg: 'Zachotsedwa', cameraReadyMsg: 'Kamera yakonzeka',
+        cameraActiveMsg: 'Kamera ili kale pantchito', cameraNotSupportedMsg: 'Foni iyi sichitha kugwiritsa kamera iyi',
+        cameraErrorMsg: 'Vuto la kamera', pleaseUploadMsg: 'Chonde ikani chithunzi choyamba',
+        pleaseUploadTypeMsg: 'Chonde ikani chithunzi', noReferencesMsg: 'Palibe zitsanzo mu database panopa',
+        startCameraFirstMsg: 'Yambitsani kamera choyamba', loadedReferencesMsg: 'Zitsanzo {n} zalowa',
+        noReferencesFoundMsg: 'Palibe zitsanzo zapezeka mu database', dbErrorMsg: 'Vuto la database',
+        connectionFailedMsg: 'Kulumikiza kwalephera', loadingPhotosMsg: 'Tikuwerenga zithunzi za zitsanzo...',
+        identifiedMsg: 'Yapezeka: {crop}', uncertainMsg: 'Sitikutsimikiza — jambulani chithunzi china choonekera bwino',
+        lowConfMsg: 'Kutsimikiza kotsika — yesani chithunzi china', noMatchMsg: 'Palibe chogwirizana bwino. Yesaninso ndi chithunzi china.',
+        cropLabel: 'Mbewu', healthyLabel: 'Ikuwoneka Bwino', issueLabel: 'Pali chizindikiro cha matenda',
+        uncertainLabel: 'Sitikutsimikiza', confidenceLabel: 'Kutsimikiza', topMatchesLabel: 'Zina zomwe zingakhaledi',
+        adviceHealthy: 'Tsambali likufanana ndi {crop} ndipo silikuwonetsa zizindikiro za matenda.',
+        adviceWarning: 'Tsambali likufanana ndi {crop} ndipo lingakhale ndi: {disease}. Chonde tsimikizirani ndi katswiri wa zaulimi musanathandize mbewuyo.',
+        adviceUncertain: 'Sitinatsimikize bwino lomwe. Yesani kujambula pafupi, mu kuwala kwabwino, pa nsalu yosalala.'
+      },
+      bem: {
+        tagline: 'Ukwishiba Amasamba Mwabucenjeshi', statusConnecting: 'Ukulundana...', statusConnected: 'Nalilundana',
+        statusOffline: 'Tabalilundene', statusError: 'Icilubo', modeLabel: 'Ukulinganya Ifikope', sectionTitle: 'Ishibeni Umulimwa Wenu',
+        badgeMatching: 'Ukulinganya Ifikope', uploadTitle: 'Bikeni Icikope ca Ibeele', uploadSubtitle: 'Kokeni no kuponya, kanteni, nangu mubomfye kamera',
+        btnCamera: 'Kamera', btnIdentify: 'Ishibeni', btnClear: 'Fumyeni', btnCapture: 'Kopeni', btnStop: 'Imeni',
+        diagnosisLabel: 'Ifisuka', resultPlaceholder: 'Bikeni icikope ca ibeele pa kwishiba',
+        refCountSuffix: 'ifilangililo fya milimwa', matchingNote: 'Ukulinganya na fikope fya cine cine',
+        footerNote: 'AgriVision Zambia · Ukwishiba Amasamba Mwabucenjeshi · Ifilangililo fya Milimwa ya Zambia',
+        disclaimerText: '<strong>Ica kwishiba:</strong> Ino application ilepeela fye ukulinganya, ukufuma ku fimonwa fya ibeele, umutundu, ne fyapo. Te kwishiba kwa cine ukufuma kuli ba kapondo. Nga ico calembwa "Tatwaishiba bwino" nelyo umulimwa uleumfwikwa uleelwala, langeniko na ba Extension Officer mwilyo mwabomba ku mulimwa.',
+        imageLoadedMsg: "Icikope naciingila. Kanteni 'Ishibeni'.", photoCapturedMsg: "Icikope nacikopwa. Kanteni 'Ishibeni'.",
+        analyzingMsg: 'Tuletamba ibeele...', clearedMsg: 'Nafumishiwa', cameraReadyMsg: 'Kamera naiteyanya',
+        cameraActiveMsg: 'Kamera nayo naibomba', cameraNotSupportedMsg: 'Iyi foni tayikonka ukubomfya kamera',
+        cameraErrorMsg: 'Icilubo ca kamera', pleaseUploadMsg: 'Natwaseni bikeni icikope intanshi',
+        pleaseUploadTypeMsg: 'Natwaseni bikeni icikope', noReferencesMsg: 'Tapali ifilangililo mu database nomba',
+        startCameraFirstMsg: 'Tendekeni kamera intanshi', loadedReferencesMsg: 'Ifilangililo {n} nafiingila',
+        noReferencesFoundMsg: 'Tapasangilwe ifilangililo mu database', dbErrorMsg: 'Icilubo ca database',
+        connectionFailedMsg: 'Ukulundana takwafikile', loadingPhotosMsg: 'Tuletambo fikope fya filangililo...',
+        identifiedMsg: 'Twasango: {crop}', uncertainMsg: 'Tatwaishiba bwino — kopeni icikope cimbi iciimoneka bwino',
+        lowConfMsg: 'Ukwishiba takukalamba — esheni icikope cimbi', noMatchMsg: 'Tapaba icalingana bwino. Esheniko na cikope cimbi.',
+        cropLabel: 'Umulimwa', healthyLabel: 'Waumfwika Bwino', issueLabel: 'Kwaba icamoneka nge bulwele',
+        uncertainLabel: 'Tatwaishiba bwino', confidenceLabel: 'Ukwishiba', topMatchesLabel: 'Ifingi ifingacitika',
+        adviceHealthy: 'Ili ibeele lyaumfwika kwati {crop} kabili talyabo bulwele nangu bumo ubulemoneka.',
+        adviceWarning: 'Ili ibeele lyaumfwika kwati {crop} kabili kuti caba ne: {disease}. Natwaseni mutwishibe kuli Extension Officer mwilyo mwabomba ku mulimwa.',
+        adviceUncertain: 'Tatwaishiba bwino cine cine. Esheni ukukopa icikope iciba mupepi, mu kubatuka kusuma, pa lubansa lwapoo.'
+      },
+      toi: {
+        tagline: 'Kuziba Matu Cabusongo', statusConnecting: 'Kuswaanya...', statusConnected: 'Yaswaanya',
+        statusOffline: 'Taakwe Kuswaanya', statusError: 'Mulandu', modeLabel: 'Kukozyanisya Zifanikizo', sectionTitle: 'Amuzibe Cilimwa Canu',
+        badgeMatching: 'Kukozyanisya Zifanikizo', uploadTitle: 'Amubike Cifanikizo ca Jani', uploadSubtitle: 'Amukokele akuponya, amudinde, naa amubelesye kamera',
+        btnCamera: 'Kamera', btnIdentify: 'Amuzibe', btnClear: 'Amugusye', btnCapture: 'Amujate', btnStop: 'Amwiime',
+        diagnosisLabel: 'Ciyubununo', resultPlaceholder: 'Amubike cifanikizo ca jani kuti tuzibe',
+        refCountSuffix: 'zikozyanisyo zya zilimwa', matchingNote: 'Kukozyanisya azifanikizo zyacini',
+        footerNote: 'AgriVision Zambia · Kuziba Matu Cabusongo · Zikozyanisyo zya Zilimwa zya Zambia',
+        disclaimerText: '<strong>Caayanda kuzibwa:</strong> Application eeyi ilapa buyo kukozyanisya, kwiinda mukubona businzu, mubala, azimwi zyajani. Tacili cimwi cizyibedwe kubantu bazizyi. Na ciyubununo cati "Tatuzi kabotu" naa cilimwa cilaboneka mbuli caciswa, amusinizigwe kuli mubelesi wamulimo (extension officer) kabutana mwacita mulimo kucilimwa.',
+        imageLoadedMsg: "Cifanikizo canjila. Amudinde 'Amuzibe'.", photoCapturedMsg: "Cifanikizo cajatwa. Amudinde 'Amuzibe'.",
+        analyzingMsg: 'Tulalanga jani...', clearedMsg: 'Cagusigwa', cameraReadyMsg: 'Kamera yalibambila',
+        cameraActiveMsg: 'Kamera ilibeleka kale', cameraNotSupportedMsg: 'Foni eeyi tiikonzyi kubelesya kamera eeyi',
+        cameraErrorMsg: 'Mulandu wa kamera', pleaseUploadMsg: 'Amubike cifanikizo kusaanguna',
+        pleaseUploadTypeMsg: 'Amubike cifanikizo', noReferencesMsg: 'Taakwe zikozyanisyo mu database lino',
+        startCameraFirstMsg: 'Amutalike kamera kusaanguna', loadedReferencesMsg: 'Zikozyanisyo {n} zyanjila',
+        noReferencesFoundMsg: 'Taakwe zikozyanisyo zyajanika mu database', dbErrorMsg: 'Mulandu wa database',
+        connectionFailedMsg: 'Kuswaanya takwazwidilila', loadingPhotosMsg: 'Tulabala zifanikizo zya zikozyanisyo...',
+        identifiedMsg: 'Twajana: {crop}', uncertainMsg: 'Tatuzi kabotu — amujate cifanikizo cimbi ciboneka kabotu',
+        lowConfMsg: 'Kusinizya takwe pati — amusole cifanikizo cimbi', noMatchMsg: 'Taakwe cikozyene kabotu. Amusole cifanikizo cimbi.',
+        cropLabel: 'Cilimwa', healthyLabel: 'Caboneka Kabotu', issueLabel: 'Kuli cimwi ciboneka mbuli buciswa',
+        uncertainLabel: 'Tatuzi kabotu', confidenceLabel: 'Kusinizya', topMatchesLabel: 'Zimwi zikonzya kuba',
+        adviceHealthy: 'Eeli jani liboneka mbuli {crop} alimwi taliboneki mbuli caciswa.',
+        adviceWarning: 'Eeli jani liboneka mbuli {crop} alimwi lilakonzya kuba a: {disease}. Amusinizigwe kuli mubelesi wamulimo kabutana mwacita mulimo.',
+        adviceUncertain: 'Tatunasinizyi kabotu pe. Amusole kujata cifanikizo ciswaanya, mumumuni mubotu, aacisani citakwe bubi.'
+      },
+      loz: {
+        tagline: 'Ku Ziba Makota ka Butali', statusConnecting: 'Ku Swalisana...', statusConnected: 'I Swalisani',
+        statusOffline: 'Ha I Swalisani', statusError: 'Mafosisa', modeLabel: 'Ku Bapanya Litombo', sectionTitle: 'Mu Zibe Simela Sa Mina',
+        badgeMatching: 'Ku Bapanya Litombo', uploadTitle: 'Mu Beye Siswaniso sa Lika', uploadSubtitle: 'Mu hohele ni ku nepa, mu tobe, kamba mu itusise kamera',
+        btnCamera: 'Kamera', btnIdentify: 'Mu Zibe', btnClear: 'Mu Zwise', btnCapture: 'Mu Nge', btnStop: 'Mu Yeme',
+        diagnosisLabel: 'Zibiso', resultPlaceholder: 'Mu beye siswaniso sa lika kuli lu zibe',
+        refCountSuffix: 'litombo za simela', matchingNote: 'Ku bapanya ni litombo za niti',
+        footerNote: 'AgriVision Zambia · Ku Ziba Makota ka Butali · Litombo za Simela za Zambia',
+        disclaimerText: '<strong>Ze Butokwa:</strong> Application ye i fa fela ku bapanya, ku zwelela fa ponahalo, mubala, ni mokutalimahala kwa lika. Haki likalabo za niti ze zwa ku caziba. Haiba i bulela "Ha lu sika ziba hande" kamba simela si bonahala inge si na ni bulwazi, mu ye ni yona ku Extension Officer pili mu si ka sebeza fa simela.',
+        imageLoadedMsg: "Siswaniso si kenile. Mu tobe 'Mu Zibe'.", photoCapturedMsg: "Siswaniso si ngilwe. Mu tobe 'Mu Zibe'.",
+        analyzingMsg: 'Lu talima lika...', clearedMsg: 'Ku Zwisizwe', cameraReadyMsg: 'Kamera i itukiselize',
+        cameraActiveMsg: 'Kamera se i sebeza', cameraNotSupportedMsg: 'Fone ye ha i koni ku itusisa kamera ye',
+        cameraErrorMsg: 'Mafosisa a kamera', pleaseUploadMsg: 'Mu beye siswaniso pili',
+        pleaseUploadTypeMsg: 'Mu beye siswaniso', noReferencesMsg: 'Ha ku na litombo mwa database cwale',
+        startCameraFirstMsg: 'Mu kale kamera pili', loadedReferencesMsg: 'Litombo {n} li kenile',
+        noReferencesFoundMsg: 'Ha ku fumanwi litombo mwa database', dbErrorMsg: 'Mafosisa a database',
+        connectionFailedMsg: 'Ku swalisana ku palezwi', loadingPhotosMsg: 'Lu bala litombo za litombo...',
+        identifiedMsg: 'Lu fumani: {crop}', uncertainMsg: 'Ha lu si ka ziba hande — mu nge siswaniso se siñwi se si bonahala hande',
+        lowConfMsg: 'Ku ziba ha ku tuna — mu like siswaniso se siñwi', noMatchMsg: 'Ha ku na se si lumelelana hande. Mu like siswaniso se siñwi.',
+        cropLabel: 'Simela', healthyLabel: 'Si Bonahala Hande', issueLabel: 'Ku na ni se si bonahala inge bulwazi',
+        uncertainLabel: 'Ha Lu Si Ka Ziba Hande', confidenceLabel: 'Ku Ziba', topMatchesLabel: 'Ze ñwi ze kona ku ba',
+        adviceHealthy: 'Lika le li bonahala inge {crop} mi ha li bonisi bulwazi.',
+        adviceWarning: 'Lika le li bonahala inge {crop} mi li kana la ba ni: {disease}. Mu ye ni yona ku Extension Officer pili mu si ka sebeza fa simela.',
+        adviceUncertain: 'Ha lu si ka ziba hande cwale-cwale. Mu like ku nga siswaniso se si bat, mwa liseli le linde, fahalimwaa sisani se si nde.'
+      }
+    };
+
+    let currentLang = localStorage.getItem('agrivision_lang') || 'en';
+
+    function t(key, vars) {
+      const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+      let str = dict[key] !== undefined ? dict[key] : (TRANSLATIONS.en[key] || key);
+      if (vars) {
+        Object.keys(vars).forEach(k => { str = str.split('{' + k + '}').join(vars[k]); });
+      }
+      return str;
+    }
+
+    function applyStaticTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.innerHTML = t(key);
+      });
+      document.documentElement.lang = currentLang === 'en' ? 'en' : currentLang;
+    }
+
+    function setLanguage(lang) {
+      currentLang = TRANSLATIONS[lang] ? lang : 'en';
+      localStorage.setItem('agrivision_lang', currentLang);
+      applyStaticTranslations();
+      // reset dynamic panels to their default translated state
+      resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${t('resultPlaceholder')}</p>`;
+    }
 
     // ---------- LEAF CHARACTERISTICS DATABASE ----------
     const LEAF_CHARACTERISTICS = {
@@ -313,8 +509,33 @@
         color: 'light green',
         aspectRatio: '3.0-6.0',
         description: 'Long, narrow, pointed leaves'
+      },
+      'Cabbage': {
+        shape: 'broad and rounded', veins: 'net-like, prominent midrib', margin: 'wavy, ruffled',
+        texture: 'crinkled', color: 'light to medium green', aspectRatio: '0.9-1.1',
+        description: 'Broad, rounded leaves with ruffled margins'
+      },
+      'Rape': {
+        shape: 'oval, slightly lobed', veins: 'net-like', margin: 'wavy',
+        texture: 'smooth to slightly rough', color: 'medium-dark green', aspectRatio: '1.1-1.4',
+        description: 'Oval leaves with wavy lobed margins'
+      },
+      'Tomato': {
+        shape: 'pinnately compound, lobed leaflets', veins: 'pinnate', margin: 'deeply lobed, serrated',
+        texture: 'slightly fuzzy', color: 'medium green', aspectRatio: '1.2-1.5',
+        description: 'Pinnately compound leaves with deeply lobed leaflets'
+      },
+      'Chinese Cabbage': {
+        shape: 'elongated, tapering', veins: 'radiating from a thick white midrib', margin: 'ruffled, wavy',
+        texture: 'crinkled', color: 'pale green blade, white midrib', aspectRatio: '1.5-2.0',
+        description: 'Elongated leaves with a thick white midrib'
       }
     };
+    // NOTE: this dictionary is now only a display fallback. Matching itself
+    // (below) compares the uploaded photo directly against each reference
+    // photo's own measured features, pulled live from Supabase — so a crop
+    // works correctly as soon as it has reference photos in the database,
+    // whether or not it's listed here.
 
     // ---------- UI Elements ----------
     const statusDot = document.getElementById('statusDot');
@@ -355,9 +576,9 @@
     // ---------- CAMERA ----------
     async function startCamera() {
       try {
-        if (isCameraActive) { showToast('📷 Camera active'); return; }
+        if (isCameraActive) { showToast('📷 ' + t('cameraActiveMsg')); return; }
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          showToast('❌ Camera not supported', true);
+          showToast('❌ ' + t('cameraNotSupportedMsg'), true);
           return;
         }
         cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -370,9 +591,9 @@
         uploadZone.style.display = 'none';
         previewContainer.style.display = 'none';
         isCameraActive = true;
-        showToast('📷 Camera ready');
+        showToast('📷 ' + t('cameraReadyMsg'));
       } catch (err) {
-        showToast('❌ Camera error: ' + err.message, true);
+        showToast('❌ ' + t('cameraErrorMsg') + ': ' + err.message, true);
       }
     }
 
@@ -388,7 +609,7 @@
 
     function capturePhoto() {
       if (!isCameraActive || !cameraStream) {
-        showToast('❌ Start camera first', true);
+        showToast('❌ ' + t('startCameraFirstMsg'), true);
         return;
       }
       const canvas = document.createElement('canvas');
@@ -403,8 +624,8 @@
       img.onload = function() { currentImageElement = img; };
       img.src = currentImageData;
       stopCamera();
-      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Photo captured. Click Identify.</p>`;
-      showToast('📸 Photo captured');
+      resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> ${t('photoCapturedMsg')}</p>`;
+      showToast('📸 ' + t('photoCapturedMsg'));
     }
 
     cameraBtn.addEventListener('click', startCamera);
@@ -432,7 +653,7 @@
     });
 
     function handleFile(file) {
-      if (!file.type.startsWith('image/')) { showToast('⚠️ Please upload an image', true); return; }
+      if (!file.type.startsWith('image/')) { showToast('⚠️ ' + t('pleaseUploadTypeMsg'), true); return; }
       const reader = new FileReader();
       reader.onload = function(e) {
         currentImageData = e.target.result;
@@ -442,8 +663,8 @@
         const img = new Image();
         img.onload = function() { currentImageElement = img; };
         img.src = currentImageData;
-        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> Image loaded. Click Identify.</p>`;
-        showToast('📸 Image loaded');
+        resultContent.innerHTML = `<p style="color:var(--ink-soft);"><i class="fas fa-check-circle" style="color:var(--gold);"></i> ${t('imageLoadedMsg')}</p>`;
+        showToast('📸 ' + t('imageLoadedMsg'));
       };
       reader.readAsDataURL(file);
     }
@@ -459,8 +680,8 @@
       uploadZone.style.display = 'block';
       cameraVideo.style.display = 'none';
       cameraControls.style.display = 'none';
-      resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> Upload a leaf image to identify</p>`;
-      showToast('Cleared');
+      resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${t('resultPlaceholder')}</p>`;
+      showToast(t('clearedMsg'));
     });
 
     // ---------- IMAGE FEATURE EXTRACTION ----------
@@ -524,264 +745,194 @@
       };
     }
 
-    // ---------- IDENTIFICATION USING CHARACTERISTICS ----------
+    // ---------- LOAD & FEATURE-EXTRACT REFERENCE PHOTOS ----------
+    // Each reference row's own photo gets its features computed once (not a
+    // generic per-crop guess), so matching compares the uploaded leaf
+    // against real photos — including disease-labelled ones — not just a
+    // crop-name lookup table.
+    function loadImageFromBase64(b64) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = b64.startsWith('data:') ? b64 : ('data:image/jpeg;base64,' + b64);
+      });
+    }
+
+    async function loadReferenceFeatures() {
+      const withPhotos = leafReferences.filter(r => r.image_data);
+      let loaded = 0;
+      await Promise.all(withPhotos.map(async (ref) => {
+        try {
+          const img = await loadImageFromBase64(ref.image_data);
+          ref.features = extractLeafFeatures(img);
+          loaded++;
+        } catch (e) {
+          console.warn('Could not read reference photo for', ref.crop_name, e);
+        }
+      }));
+      return loaded;
+    }
+
+    // Weighted normalized distance between two feature sets -> 0 (identical) upward.
+    function featureDistance(a, b) {
+      const dAspect = Math.abs(a.aspectRatio - b.aspectRatio) / 3;
+      const dGreen = Math.abs(a.greenDominance - b.greenDominance) / 100;
+      const dEdges = Math.abs(a.edges - b.edges) / 0.6;
+      const dBrightness = Math.abs(a.brightness - b.brightness) / 255;
+      const dHue = (Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b)) / (3 * 255);
+      return (0.30 * dAspect) + (0.26 * dGreen) + (0.18 * dEdges) + (0.12 * dBrightness) + (0.14 * dHue);
+    }
+
+    // ---------- IDENTIFICATION: match against real reference photos ----------
+    // This is still a rough visual heuristic (leaf shape/colour/texture),
+    // not a trained disease-recognition model — confidence is deliberately
+    // capped and low-confidence results are reported as "Uncertain" rather
+    // than guessed, per the disclaimer shown on this app.
+    const CONFIDENCE_CAP = 78;
+    const UNCERTAIN_BELOW = 38;
+
     async function identifyLeaf(imageElement) {
       const features = extractLeafFeatures(imageElement);
-      
-      if (leafReferences.length === 0) {
-        return {
-          name: "No references",
-          confidence: 0,
-          method: "No database",
-          details: ["Add crop references to the database first"],
-          characteristics: {}
-        };
+      const usable = leafReferences.filter(r => r.features);
+
+      if (usable.length === 0) {
+        return { status: 'no-data' };
       }
-      
-      let scores = {};
-      let details = {};
-      
-      for (const ref of leafReferences) {
-        const cropName = ref.crop_name;
-        const char = LEAF_CHARACTERISTICS[cropName];
-        
-        if (!char) {
-          scores[cropName] = 0.5; // Default score if no characteristics
-          continue;
-        }
-        
-        let score = 0;
-        let matchDetails = [];
-        
-        // 1. Aspect ratio matching
-        const aspect = features.aspectRatio;
-        const targetAspect = char.aspectRatio;
-        if (targetAspect) {
-          const [min, max] = targetAspect.split('-').map(Number);
-          if (aspect >= min && aspect <= max) {
-            score += 30;
-            matchDetails.push(`Aspect ratio ${aspect.toFixed(2)} matches ${targetAspect}`);
-          } else {
-            // Partial credit based on closeness
-            const mid = (min + max) / 2;
-            const diff = Math.abs(aspect - mid) / (max - min + 1);
-            score += Math.max(0, 30 - diff * 30);
-          }
-        }
-        
-        // 2. Color matching (green dominance)
-        const greenScore = features.greenDominance;
-        if (char.color) {
-          if (char.color.includes('bright') && greenScore > 0.5) {
-            score += 20;
-            matchDetails.push('Bright green color');
-          } else if (char.color.includes('dark') && greenScore > 0.6) {
-            score += 20;
-            matchDetails.push('Dark green color');
-          } else if (char.color.includes('medium') && greenScore > 0.4 && greenScore < 0.6) {
-            score += 20;
-            matchDetails.push('Medium green color');
-          } else if (char.color.includes('light') && greenScore < 0.5) {
-            score += 20;
-            matchDetails.push('Light green color');
-          }
-        }
-        
-        // 3. Shape matching based on aspect ratio
-        if (char.shape) {
-          if (char.shape.includes('long') && aspect > 1.8) {
-            score += 25;
-            matchDetails.push('Long leaf shape');
-          } else if (char.shape.includes('narrow') && aspect > 2.5) {
-            score += 25;
-            matchDetails.push('Narrow leaf shape');
-          } else if (char.shape.includes('oval') && aspect > 1.2 && aspect < 1.8) {
-            score += 25;
-            matchDetails.push('Oval leaf shape');
-          } else if (char.shape.includes('round') && aspect < 1.3) {
-            score += 25;
-            matchDetails.push('Round leaf shape');
-          } else if (char.shape.includes('palmate') && aspect < 1.2) {
-            score += 25;
-            matchDetails.push('Palmate leaf shape');
-          } else if (char.shape.includes('heart') && aspect < 1.2) {
-            score += 25;
-            matchDetails.push('Heart-shaped leaf');
-          } else if (char.shape.includes('trifoliate') && aspect > 0.9 && aspect < 1.5) {
-            score += 25;
-            matchDetails.push('Trifoliate leaf shape');
-          }
-        }
-        
-        // 4. Texture (edge detection)
-        const edgeScore = features.edges;
-        if (char.texture) {
-          if (char.texture.includes('rough') && edgeScore > 0.3) {
-            score += 15;
-            matchDetails.push('Rough texture');
-          } else if (char.texture.includes('smooth') && edgeScore < 0.25) {
-            score += 15;
-            matchDetails.push('Smooth texture');
-          } else if (char.texture.includes('hairy') && edgeScore > 0.2) {
-            score += 15;
-            matchDetails.push('Hairy texture');
-          }
-        }
-        
-        // 5. Vein pattern (inferred from shape and aspect ratio)
-        if (char.veins) {
-          if (char.veins.includes('parallel') && aspect > 1.8) {
-            score += 10;
-            matchDetails.push('Parallel veins');
-          } else if (char.veins.includes('radiating') && aspect < 1.3) {
-            score += 10;
-            matchDetails.push('Radiating veins');
-          } else if (char.veins.includes('net') && aspect > 1.0 && aspect < 1.8) {
-            score += 10;
-            matchDetails.push('Net-like veins');
-          }
-        }
-        
-        scores[cropName] = Math.min(100, score);
-        details[cropName] = {
-          score: Math.min(100, score),
-          matches: matchDetails.slice(0, 5)
-        };
+
+      const scored = usable.map(ref => {
+        const dist = featureDistance(features, ref.features);
+        const score = Math.max(0, 100 - (dist * 130));
+        return { ref, score };
+      }).sort((a, b) => b.score - a.score);
+
+      const top = scored[0];
+      const confidence = Math.round(Math.min(CONFIDENCE_CAP, top.score));
+
+      const topMatches = scored.slice(0, 3).map(s => {
+        const diseaseTag = (s.ref.disease && s.ref.disease !== 'Healthy') ? ` (${s.ref.disease})` : '';
+        return `${s.ref.crop_name}${diseaseTag}: ${Math.round(Math.min(CONFIDENCE_CAP, s.score))}%`;
+      });
+
+      if (confidence < UNCERTAIN_BELOW) {
+        return { status: 'uncertain', confidence, topMatches };
       }
-      
-      // Find best match
-      let bestMatch = null;
-      let bestScore = 0;
-      let sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-      
-      if (sortedScores.length > 0) {
-        bestMatch = sortedScores[0][0];
-        bestScore = sortedScores[0][1];
-      }
-      
-      // Only return a match if score is above threshold
-      if (bestMatch && bestScore > 30) {
-        const topMatches = sortedScores.slice(0, 3).map(([name, score]) => 
-          `${name}: ${Math.round(score)}%`
-        );
-        
-        return {
-          name: bestMatch,
-          confidence: Math.round(Math.min(95, bestScore)),
-          method: 'Characteristic Matching',
-          details: topMatches,
-          characteristics: LEAF_CHARACTERISTICS[bestMatch],
-          matchDetails: details[bestMatch]?.matches || []
-        };
-      }
-      
-      // If no good match, return the best available with low confidence
-      if (bestMatch) {
-        return {
-          name: bestMatch,
-          confidence: Math.round(Math.min(50, bestScore)),
-          method: 'Low Confidence',
-          details: [`Best match: ${bestMatch} (${Math.round(bestScore)}%)`],
-          characteristics: LEAF_CHARACTERISTICS[bestMatch],
-          matchDetails: []
-        };
-      }
-      
+
+      const ref = top.ref;
+      const isHealthy = !ref.disease || ref.disease === 'Healthy';
+      const charSource = ref.characteristics || (LEAF_CHARACTERISTICS[ref.crop_name] || null);
+
       return {
-        name: "Unknown",
-        confidence: 0,
-        method: "No match",
-        details: ["No matching crop found. Try a clearer photo."],
-        characteristics: null,
-        matchDetails: []
+        status: isHealthy ? 'healthy' : 'warning',
+        cropName: ref.crop_name,
+        disease: ref.disease,
+        confidence,
+        leafType: ref.leaf_type || (LEAF_CHARACTERISTICS[ref.crop_name] && LEAF_CHARACTERISTICS[ref.crop_name].description) || '',
+        characteristics: charSource,
+        topMatches
       };
     }
 
     // ---------- ANALYZE ----------
     analyzeBtn.addEventListener('click', async function() {
       if (!currentImageData || !currentImageElement) {
-        showToast('⚠️ Please upload an image first', true);
+        showToast('⚠️ ' + t('pleaseUploadMsg'), true);
         return;
       }
       if (leafReferences.length === 0) {
-        showToast('⚠️ No crop references in database. Add some first.', true);
+        showToast('⚠️ ' + t('noReferencesMsg'), true);
         return;
       }
 
       resultContent.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <span class="spinner"></span> <span style="font-weight:500;">Analyzing leaf characteristics...</span>
+        <span class="spinner"></span> <span style="font-weight:500;">${t('analyzingMsg')}</span>
       </div>`;
       analyzeBtn.disabled = true;
 
       try {
         const result = await identifyLeaf(currentImageElement);
-        
-        const color = result.confidence > 50 ? '#2b7a3e' : '#d4a72c';
-        const barColor = result.confidence > 50 ? '#2b7a3e' : '#d4a72c';
-        
-        let detailsHtml = '';
-        if (result.details && result.details.length > 0) {
-          detailsHtml = result.details.map(d => 
+
+        if (result.status === 'no-data') {
+          resultContent.innerHTML = `<p style="color:var(--ink-faint);"><i class="fas fa-info-circle"></i> ${t('noReferencesMsg')}</p>`;
+          showToast('⚠️ ' + t('noReferencesMsg'), true);
+          return;
+        }
+
+        if (result.status === 'uncertain') {
+          const matchesHtml = result.topMatches.map(d =>
             `<span style="display:inline-block;background:#f0f0f0;padding:2px 10px;border-radius:12px;margin:2px;font-size:11px;">${d}</span>`
           ).join(' ');
+          resultContent.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span class="disease-pill uncertain"><i class="fas fa-circle-question"></i> ${t('uncertainLabel')}</span>
+              </div>
+              <div class="confidence"><i class="fas fa-chart-line"></i> ${t('confidenceLabel')}: <span style="color:var(--ink-faint);font-weight:700;">${result.confidence}%</span></div>
+              <div class="confidence-bar"><div class="fill" style="width:${result.confidence}%;background:var(--ink-faint);"></div></div>
+              <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--ink-faint);font-size:13px;">
+                <i class="fas fa-lightbulb" style="color:var(--gold);"></i> ${t('adviceUncertain')}
+              </div>
+              <div class="match-details"><span style="font-weight:600;">${t('topMatchesLabel')}:</span> ${matchesHtml}</div>
+            </div>
+          `;
+          showToast('⚠️ ' + t('uncertainMsg'), true);
+          return;
         }
-        
+
+        const isHealthy = result.status === 'healthy';
+        const pillClass = isHealthy ? 'healthy' : 'warning';
+        const pillIcon = isHealthy ? 'fa-circle-check' : 'fa-triangle-exclamation';
+        const pillLabel = isHealthy ? t('healthyLabel') : t('issueLabel');
+        const barColor = isHealthy ? '#2b7a3e' : '#a13d2a';
+        const diseaseLine = (!isHealthy && result.disease)
+          ? `<div style="font-weight:600;color:#a13d2a;margin-top:2px;">${result.disease}</div>` : '';
+
         let charHtml = '';
         if (result.characteristics) {
           const chars = result.characteristics;
           charHtml = `
             <div style="margin-top:6px;background:#fff;padding:8px 12px;border-radius:10px;border:1px solid #eef4ea;font-size:12px;">
-              <div style="font-weight:600;color:var(--primary);margin-bottom:4px;">Leaf Characteristics:</div>
+              <div style="font-weight:600;color:var(--primary);margin-bottom:4px;">${t('diagnosisLabel')}:</div>
               <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Shape: ${chars.shape}</span>
-                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Veins: ${chars.veins}</span>
-                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Color: ${chars.color}</span>
-                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">Texture: ${chars.texture}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">${chars.shape || ''}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">${chars.veins || ''}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">${chars.color || ''}</span>
+                <span style="background:#eef4ea;padding:2px 8px;border-radius:12px;">${chars.texture || ''}</span>
               </div>
-              <div style="margin-top:4px;color:var(--ink-soft);font-style:italic;">${chars.description}</div>
+              <div style="margin-top:4px;color:var(--ink-soft);font-style:italic;">${result.leafType || chars.description || ''}</div>
             </div>
           `;
         }
-        
-        let matchDetailsHtml = '';
-        if (result.matchDetails && result.matchDetails.length > 0) {
-          matchDetailsHtml = `
-            <div style="margin-top:4px;font-size:11px;color:var(--ink-faint);">
-              <i class="fas fa-check-circle" style="color:var(--gold);"></i> 
-              ${result.matchDetails.slice(0, 3).join(' • ')}
-            </div>
-          `;
-        }
-        
+
+        const matchesHtml = result.topMatches.map(d =>
+          `<span style="display:inline-block;background:#f0f0f0;padding:2px 10px;border-radius:12px;margin:2px;font-size:11px;">${d}</span>`
+        ).join(' ');
+
+        const adviceText = isHealthy
+          ? t('adviceHealthy', { crop: result.cropName })
+          : t('adviceWarning', { crop: result.cropName, disease: result.disease });
+
         resultContent.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.name}</span>
-              <span class="disease-tag" style="background:${color};color:white;">${result.method}</span>
+              <span class="plant-name"><i class="fas fa-leaf" style="color:var(--gold);"></i> ${result.cropName}</span>
+              <span class="disease-pill ${pillClass}"><i class="fas ${pillIcon}"></i> ${pillLabel}</span>
             </div>
-            <div class="confidence"><i class="fas fa-chart-line"></i> Confidence: <span style="color:${barColor};font-weight:700;">${result.confidence}%</span></div>
+            ${diseaseLine}
+            <div class="confidence"><i class="fas fa-chart-line"></i> ${t('confidenceLabel')}: <span style="color:${barColor};font-weight:700;">${result.confidence}%</span></div>
             <div class="confidence-bar"><div class="fill" style="width:${result.confidence}%;background:${barColor};"></div></div>
             ${charHtml}
-            ${matchDetailsHtml}
-            <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid var(--gold);font-size:13px;">
-              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> 
-              ${result.confidence > 50 ? 
-                `This leaf matches <strong>${result.name}</strong> based on shape, color, and texture characteristics.` :
-                result.name === "Unknown" ?
-                `No matching crop found. Try taking a clearer photo with the full leaf visible.` :
-                `Low confidence match. Try another photo with better lighting.`
-              }
+            <div style="margin-top:6px;background:#fff;padding:10px 14px;border-radius:14px;border-left:4px solid ${isHealthy ? 'var(--gold)' : '#a13d2a'};font-size:13px;">
+              <i class="fas fa-lightbulb" style="color:var(--gold);"></i> ${adviceText}
             </div>
-            ${result.confidence > 30 ? `<div class="match-details">${detailsHtml}</div>` : ''}
+            <div class="match-details"><span style="font-weight:600;">${t('topMatchesLabel')}:</span> ${matchesHtml}</div>
           </div>
         `;
-        
-        if (result.confidence > 50) {
-          showToast(`✅ Identified: ${result.name} (${result.confidence}%)`);
-        } else if (result.confidence > 30) {
-          showToast(`⚠️ Low confidence: ${result.name} (${result.confidence}%)`, true);
+
+        if (isHealthy) {
+          showToast('✅ ' + t('identifiedMsg', { crop: result.cropName }) + ` (${result.confidence}%)`);
         } else {
-          showToast(`⚠️ No clear match found. Try another photo.`, true);
+          showToast('⚠️ ' + t('identifiedMsg', { crop: result.cropName }) + ` — ${result.disease}`, true);
         }
       } catch (err) {
         showToast('❌ Error: ' + err.message, true);
@@ -795,40 +946,42 @@
     function initSupabase() {
       try {
         if (typeof window.supabase === 'undefined') {
-          setConnectionStatus('offline', 'SDK error');
+          setConnectionStatus('offline', t('statusError'));
           return;
         }
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           auth: { persistSession: false, autoRefreshToken: false }
         });
-        
+
         supabase.from('crop_references').select('*')
-          .then(({ data, error }) => {
-            if (error) { 
-              setConnectionStatus('offline', 'Error');
-              showToast('❌ DB error: ' + error.message, true);
+          .then(async ({ data, error }) => {
+            if (error) {
+              setConnectionStatus('offline', t('statusError'));
+              showToast('❌ ' + t('dbErrorMsg') + ': ' + error.message, true);
               return;
             }
             isConnected = true;
-            setConnectionStatus('online', 'Connected');
-            
+
             if (data && data.length > 0) {
               leafReferences = data;
-              // reference grid is hidden, but we update the count
               refCountEl.textContent = data.length;
-              showToast(`✅ Loaded ${data.length} crop references`);
+              setConnectionStatus('connecting', t('loadingPhotosMsg'));
+              const loaded = await loadReferenceFeatures();
+              setConnectionStatus('online', t('statusConnected'));
+              showToast('✅ ' + t('loadedReferencesMsg', { n: loaded }));
             } else {
-              showToast('⚠️ No crop references found. Add some to the database.', true);
+              setConnectionStatus('online', t('statusConnected'));
+              showToast('⚠️ ' + t('noReferencesFoundMsg'), true);
               refCountEl.textContent = '0';
             }
           })
           .catch(err => {
-            setConnectionStatus('offline', 'Error');
-            showToast('❌ Connection failed: ' + err.message, true);
+            setConnectionStatus('offline', t('statusError'));
+            showToast('❌ ' + t('connectionFailedMsg') + ': ' + err.message, true);
           });
-      } catch (e) { 
-        setConnectionStatus('offline', 'Error');
-        showToast('❌ Init error: ' + e.message, true);
+      } catch (e) {
+        setConnectionStatus('offline', t('statusError'));
+        showToast('❌ ' + t('connectionFailedMsg') + ': ' + e.message, true);
       }
     }
 
@@ -837,11 +990,18 @@
       // no-op: grid is hidden
     }
 
+    // ---------- LANGUAGE SELECTOR ----------
+    const langSelect = document.getElementById('langSelect');
+    langSelect.value = currentLang;
+    langSelect.addEventListener('change', function() {
+      setLanguage(this.value);
+    });
+
     // ---------- INIT ----------
+    applyStaticTranslations();
     initSupabase();
 
-    console.log('🌱 AgriScan Zambia - Leaf Characteristic Matching');
-    console.log('📊 Using 10 crop characteristics for identification');
+    console.log('🌱 AgriVision Zambia - Photo-based Leaf & Disease Matching');
     console.log(`📸 ${leafReferences.length} crop references loaded`);
   })();
 </script>
